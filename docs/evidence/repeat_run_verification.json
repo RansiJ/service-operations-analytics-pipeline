@@ -1,0 +1,37 @@
+{
+  "first_run_id": "e4d7445f-9e99-459e-9d35-996ce563ee4b",
+  "second_run_id": "9ab71daa-0cae-4ab0-ab78-32c1b44580ba",
+  "identical_metrics": true,
+  "identical_csv_files": [
+    "agency_metrics.csv",
+    "category_metrics.csv",
+    "daily_metrics.csv",
+    "etl_demo.csv",
+    "metrics.csv",
+    "quality_issues.csv",
+    "request_quality_flags.csv"
+  ],
+  "request_business_hash_first": "7a055700a71bb8e8c9080d72904ef8dae08373aaaa910a46ce6b34e4b39ea7b9",
+  "request_business_hash_second": "7a055700a71bb8e8c9080d72904ef8dae08373aaaa910a46ce6b34e4b39ea7b9",
+  "raw_rows_after_two_runs": 78466,
+  "raw_distinct_ids_after_two_runs": 78466,
+  "audit_runs": [
+    {
+      "run_id": "e4d7445f-9e99-459e-9d35-996ce563ee4b",
+      "status": "success",
+      "extracted": 78466,
+      "loaded": 78466,
+      "rejected": 0,
+      "duplicates": 0
+    },
+    {
+      "run_id": "9ab71daa-0cae-4ab0-ab78-32c1b44580ba",
+      "status": "success",
+      "extracted": 78466,
+      "loaded": 78466,
+      "rejected": 0,
+      "duplicates": 0
+    }
+  ],
+  "note": "Request export hashes differ because observed_at changes; business columns exclude only observed_at."
+}

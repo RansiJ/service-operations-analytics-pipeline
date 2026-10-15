@@ -1,0 +1,61 @@
+name: Bounded public-data refresh
+
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: 'NYC creation date, inclusive (YYYY-MM-DD)'
+        required: true
+        default: '2026-10-01'
+        type: string
+      end:
+        description: 'NYC creation date, exclusive (YYYY-MM-DD; at most 31 days)'
+        required: true
+        default: '2026-10-08'
+        type: string
+  schedule:
+    - cron: '23 10 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bounded-data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: '0.12.7'
+      - run: uv sync --frozen
+      - run: uv run --frozen pytest
+      - name: Extract bounded cohort, validate and export
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_START: ${{ inputs.start }}
+          INPUT_END: ${{ inputs.end }}
+        shell: bash
+        run: |
+          args=(--max-records 25000)
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            args=(--start "$INPUT_START" --end "$INPUT_END" --max-records 100000)
+          fi
+          uv run --frozen service-analytics "${args[@]}" 2>&1 | tee pipeline.log
+      - name: Upload results and diagnostic log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: service-operations-${{ github.run_id }}
+          path: |
+            outputs/
+            pipeline.log
+          retention-days: 14
+          if-no-files-found: error

@@ -1,0 +1,39 @@
+{
+  "verified_at_utc": "2026-10-15T00:34:41.528861+00:00",
+  "verified_on_costa_rica": "2026-10-14",
+  "dataset_id": "erm2-nwe9",
+  "dataset_name": "311 Service Requests from 2020 to Present",
+  "metadata_url": "https://data.cityofnewyork.us/api/views/erm2-nwe9.json",
+  "resource_url": "https://data.cityofnewyork.us/resource/erm2-nwe9.json",
+  "selected_schema": {
+    "unique_key": "text",
+    "created_date": "calendar_date",
+    "closed_date": "calendar_date",
+    "agency": "text",
+    "agency_name": "text",
+    "complaint_type": "text",
+    "descriptor": "text",
+    "status": "text",
+    "resolution_action_updated_date": "calendar_date",
+    "borough": "text"
+  },
+  "system_field_probe": ":updated_at as source_updated_at returned UTC timestamps",
+  "latest_update_group_probe": [
+    {
+      "source_updated_at": "2026-10-14T01:43:42.752Z",
+      "rows": 3320
+    },
+    {
+      "source_updated_at": "2026-10-14T01:43:41.456Z",
+      "rows": 6811
+    },
+    {
+      "source_updated_at": "2026-10-14T01:43:39.942Z",
+      "rows": 5929
+    }
+  ],
+  "window_start": "2026-10-01",
+  "window_end_exclusive": "2026-10-08",
+  "source_count_before_and_after": 78466,
+  "note": "System timestamp groups show ingestion batches; no claim that they are business status-change timestamps."
+}

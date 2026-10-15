@@ -1,0 +1,2 @@
+total_requests,open_requests,closed_requests,unknown_status_requests,resolution_eligible_requests,median_resolution_hours,flagged_requests,valid_requests,flagged_pct
+78466,17360,61098,8,61053,3.390833333333333,1866,76600,2.378100068819616

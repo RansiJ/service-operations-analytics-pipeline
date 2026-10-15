@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "service-operations-analytics-pipeline"
+version = "1.0.0"
+description = "Bounded NYC 311 ELT analytics with DuckDB and a small ETL comparison"
+requires-python = ">=3.12"
+dependencies = ["duckdb>=1.4,<2", "requests>=2.32,<3", "matplotlib>=3.9,<4", "tzdata>=2025.2; sys_platform == 'win32'"]
+
+[dependency-groups]
+dev = ["pytest>=8.3,<10"]
+
+[project.scripts]
+service-analytics = "service_analytics.pipeline:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/service_analytics"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

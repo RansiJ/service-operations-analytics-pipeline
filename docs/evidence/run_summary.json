@@ -1,0 +1,43 @@
+{
+  "run_id": "9ab71daa-0cae-4ab0-ab78-32c1b44580ba",
+  "started_at": "2026-10-15T00:31:42.732514+00:00",
+  "window_start": "2026-10-01",
+  "window_end_exclusive": "2026-10-08",
+  "source": "https://data.cityofnewyork.us/resource/erm2-nwe9.json",
+  "status": "success",
+  "loaded_count": 78466,
+  "rejected_count": 0,
+  "duplicate_count": 0,
+  "extracted_count": 78466,
+  "source_count": 78466,
+  "observed_at": "2026-10-15T00:32:06.211358+00:00",
+  "metrics": {
+    "total_requests": 78466,
+    "open_requests": 17360,
+    "closed_requests": 61098,
+    "unknown_status_requests": 8,
+    "resolution_eligible_requests": 61053,
+    "median_resolution_hours": 3.390833333333333,
+    "flagged_requests": 1866,
+    "valid_requests": 76600,
+    "flagged_pct": 2.378100068819616
+  },
+  "etl_comparison": {
+    "sample_rows": 1000,
+    "mismatched_rows": 0,
+    "median_resolution_hours": 2.1325
+  },
+  "warnings": [
+    "Quality flags present: inspect quality_issues.csv"
+  ],
+  "csv_sha256": {
+    "agency_metrics.csv": "7db5d415560670fcae420f08abaab1ca27b978bb24acb4a3d1b691a2996bd954",
+    "category_metrics.csv": "b6e171fee162759d17a5320c9042c1bdf64802a25e15d275645cb099839c5477",
+    "daily_metrics.csv": "56686735dc07cc38791b57322d3348d1d63440f8ed2b1c0ac3b021c82a0e9b25",
+    "etl_demo.csv": "cbec230b0a04a30b0b50cb7ddebffbaa5783deb59d50fb16b46d6bb34250aa08",
+    "metrics.csv": "1b5795d3d906323cb01a258e25feb899e9349ea701720346b74bae00bb52c34b",
+    "quality_issues.csv": "f9c6b1b82d14112c7900cf7dc0ff9bdc5a4661474942506653f0e7478a403d6b",
+    "request_quality_flags.csv": "38560ba92c2d2d26825c50b08399c3473eaf1fa07fe16415bd580b65c80c4cd6",
+    "requests.csv": "07c273f754929dfaceb61e41803fd28a376a01c4f71af0e7fc15fb40af169804"
+  }
+}

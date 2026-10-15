@@ -1,0 +1,5 @@
+rule,affected_requests
+open_with_closed_date,1813
+negative_resolution_interval,44
+unknown_status,8
+closed_without_date,1
