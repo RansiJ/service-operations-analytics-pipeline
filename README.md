@@ -154,6 +154,8 @@ The largest category was **ILLEGAL PARKING (13,664)** and the largest agency by 
 
 Actions use pinned commit SHAs and read-only repository permissions. Source outages, rate limits, runner delays, schema changes or volume caps can fail a live run; these failures are visible in Actions and its diagnostic log. CI passing does not prove API availability. Scheduled runners are ephemeral: refresh a historical window manually to capture later closures. The weekly job is a bounded execution demonstration, not continuous citywide monitoring. Public repository artifacts contain only selected public-source fields.
 
+**Publication verified:** [Linux and Windows CI passed](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/runs/38660978021), and a [manual real-data run passed and produced a downloadable artifact](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/runs/38660987609). All eight downloaded CSV hashes were verified, and its metrics matched the recorded local results. [Verification record](docs/evidence/publication_verification.json).
+
 ## Limitations and future improvements
 
 The source can change during pagination; no cross-request snapshot guarantee is available. Floating dates make elapsed durations around DST transitions approximate wall-clock hours. Resolution statistics exclude unresolved cases and are affected by cohort age and agency/category mix. A closed request is not proof of service satisfaction. Open requests with closure dates need source-domain investigation.

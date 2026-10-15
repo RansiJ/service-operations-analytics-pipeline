@@ -1,0 +1,59 @@
+{
+  "verified_at_utc": "2026-10-15T00:38:36.900362+00:00",
+  "verified_on_costa_rica": "2026-10-14",
+  "repository_url": "https://github.com/RansiJ/service-operations-analytics-pipeline",
+  "visibility": "public",
+  "implementation_commit": "cd53f2ee349d2ccc79269c43873a6e9577e09c2a",
+  "ci": {
+    "conclusion": "success",
+    "databaseId": 38660978021,
+    "headSha": "cd53f2ee349d2ccc79269c43873a6e9577e09c2a",
+    "jobs": [
+      {
+        "name": "test (windows-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "test (ubuntu-latest)",
+        "conclusion": "success"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/RansiJ/service-operations-analytics-pipeline/actions/runs/38660978021"
+  },
+  "manual_pipeline": {
+    "conclusion": "success",
+    "databaseId": 38660987609,
+    "headSha": "cd53f2ee349d2ccc79269c43873a6e9577e09c2a",
+    "status": "completed",
+    "url": "https://github.com/RansiJ/service-operations-analytics-pipeline/actions/runs/38660987609"
+  },
+  "artifacts": [
+    {
+      "id": 11938424749,
+      "name": "service-operations-38660987609",
+      "size_in_bytes": 1840694,
+      "digest": "sha256:de809b2a8dcde6f56c36418f539b9a3c61fade582a10faf08cf7b660576685a8",
+      "expires_at": "2026-10-29T00:37:27Z"
+    }
+  ],
+  "downloaded_artifact_csv_hashes_verified": true,
+  "github_metrics_match_local_recorded_metrics": true,
+  "github_metrics": {
+    "total_requests": 78466,
+    "open_requests": 17360,
+    "closed_requests": 61098,
+    "unknown_status_requests": 8,
+    "resolution_eligible_requests": 61053,
+    "median_resolution_hours": 3.390833333333333,
+    "flagged_requests": 1866,
+    "valid_requests": 76600,
+    "flagged_pct": 2.378100068819616
+  },
+  "github_etl_comparison": {
+    "sample_rows": 1000,
+    "mismatched_rows": 0,
+    "median_resolution_hours": 2.1325
+  },
+  "note": "These runs validate the implementation commit above; later documentation-only commits may follow."
+}

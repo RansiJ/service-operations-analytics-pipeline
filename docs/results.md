@@ -53,7 +53,9 @@ In this run these counts total 1,866; the general rules can overlap. Open reques
 
 After two real runs, RAW contained **78,466 rows and 78,466 distinct IDs**, rather than double that number. The two runs had identical metrics and identical hashes for seven CSVs (all except `requests.csv`). Request business columns also had identical canonical hashes after excluding only `observed_at`; that observation timestamp intentionally changes on each refresh. Both local audit rows reported `success`.
 
-**38 offline pytest cases** pass locally on Python 3.12. They include mocked extraction, SQL quality/metric checks, ETL parity, duplicate prevention, changed-status UPSERT, failed API audit, failed transformation rollback, failed export rollback, anomaly baseline gating and end-to-end export repeatability. Package build and an isolated wheel SQL-resource check also pass. GitHub Actions independently executes the suite on Linux and Windows after publication.
+**38 offline pytest cases** pass locally on Python 3.12. They include mocked extraction, SQL quality/metric checks, ETL parity, duplicate prevention, changed-status UPSERT, failed API audit, failed transformation rollback, failed export rollback, anomaly baseline gating and end-to-end export repeatability. Package build and an isolated wheel SQL-resource check also pass. [GitHub Actions independently passed all 38 cases on both Linux and Windows](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/runs/38660978021).
+
+The [manual GitHub-hosted pipeline execution](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/runs/38660987609) also succeeded against the live API and published an artifact. All eight downloaded CSV hashes were checked against its manifest, and its metrics and 1,000-row ETL comparison matched the local run. This proves one successful hosted execution, not ongoing source availability. The weekly trigger is configured but has not yet been observed firing on its schedule. [Publication verification evidence](evidence/publication_verification.json).
 
 ## Artifacts and practical limits
 
