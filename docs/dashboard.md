@@ -1,6 +1,9 @@
 # Interactive aggregate dashboard
 
-**Public URL:** [NYC 311 | Service Operations Analytics](https://ransij.github.io/service-operations-analytics-pipeline/)
+**Intended public URL:** [NYC 311 | Service Operations Analytics](https://ransij.github.io/service-operations-analytics-pipeline/).
+An HTTP check on November 4, 2026 returned **404**. Use the local build below;
+the existing Pages workflow is preserved, but its deployment was not performed
+or verified in phase 2. Earlier publication statements are historical context.
 
 The pipeline remains the source of analytical definitions. This small presentation layer reads its verified aggregates, checks their integrity and exports five Plotly figures into a static HTML/CSS page. It introduces no database, API extraction, web framework or Python server.
 

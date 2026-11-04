@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Phase 2 — parallel analytical migration
+
+- Preserve the previously uncommitted dashboard and phases 0–1 in separate local commits.
+- Migrate classification, overlapping quality flags, eligible durations and all five
+  analytical marts into an eight-model dbt DAG, with one ephemeral intermediate.
+- Extend the isolated verifier to compare schemas and exact row multisets for all
+  six original outputs, preserving the phase-1 staging API.
+- Add deterministic empty/weekly/band-boundary scenarios and corruption checks;
+  move the target guard into parsing so invalid build targets fail before schema creation.
+- Add model contracts, ADR-002 and a full parity/regression report. Preserve
+  ingestion, original SQL, transactions, ETL comparison, exports and workflows.
+- Restructure the repository README around purpose, real evidence, architecture
+  and offline reproduction. Correct the intended dashboard URL's observed 404 status.
+- Keep project version 1.0.0; no operational dbt integration or remote publication.
+
+### Phases 0–1 (previous work)
+
 - Auditoría del sistema original y baseline offline, con identificación y
   preservación de cambios locales previos del dashboard.
 - Grupo opcional uv para dbt Core 1.12.6 y dbt-duckdb 1.11.1, sin cambiar la
@@ -13,5 +30,6 @@
   protección ante selecciones incorrectas y conservación de anomalías.
 - ADR-001, guía de reproducción, límites y fases pendientes.
 
-No se reemplaza `transform.sql`, no se integra dbt en `pipeline.py`, no se migran
-métricas/exportaciones y no se publica la futura versión 1.1.0.
+En las fases 0–1 no se migraron métricas. La fase 2 las reproduce en paralelo;
+`transform.sql`, `pipeline.py` y las exportaciones originales permanecen como antes.
+No se publica la futura versión 1.1.0.

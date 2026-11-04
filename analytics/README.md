@@ -1,39 +1,29 @@
-# dbt experimental
+# Isolated dbt analytics
 
-Sólo fase 1: un staging de solicitudes, sin migrar métricas, calidad ni operación.
-El proyecto sigue en 1.0.0. Ejecutar desde la **raíz del repositorio**, con Python 3.12.
+Experimental phase 2: eight models (one ephemeral), seven stored tables and
+six outputs equivalent to the original SQL on deterministic synthetic snapshots.
+The original pipeline remains the operational entry point. Version is 1.0.0.
+
+Run from the repository root with Python 3.12:
 
 ```shell
 uv sync --frozen --group dbt
 uv run --frozen --group dbt python -m service_analytics.dbt_poc prepare
-uv run --frozen --group dbt dbt debug --project-dir analytics --profiles-dir analytics
-uv run --frozen --group dbt dbt run --project-dir analytics --profiles-dir analytics --vars '{run_id: poc-selected, snapshot_id: poc-fixture-v1}'
-uv run --frozen --group dbt dbt test --project-dir analytics --profiles-dir analytics --vars '{run_id: poc-selected, snapshot_id: poc-fixture-v1}'
+uv run --frozen --group dbt dbt build --project-dir analytics --profiles-dir analytics --vars '{run_id: poc-selected, snapshot_id: poc-fixture-v1}'
 uv run --frozen --group dbt python -m service_analytics.dbt_poc verify
-uv run --frozen --group dbt dbt docs generate --project-dir analytics --profiles-dir analytics --vars '{run_id: poc-selected, snapshot_id: poc-fixture-v1}'
+uv run --frozen --group dbt pytest
 ```
 
-El preparador crea `analytics/sandbox/service_requests_poc.duckdb`, con siete
-solicitudes seleccionadas y una fila RAW adicional de otra cohorte. Nunca llama
-al API ni abre la base operacional. **No sobrescribe archivos**: en ejecuciones
-posteriores reutilizar la base preparada y comenzar en `dbt debug`. Para una base
-nueva usar `--database` y el mismo `DBT_POC_DATABASE`, siempre terminado en
-`_poc.duckdb`. Los detalles PowerShell/Bash están en la guía de integración.
+Preparation refuses existing files. On subsequent runs reuse the known database
+and omit prepare. Sources/metadata stay in main and all dbt tables stay in
+`dbt_staging`. The database is `analytics/sandbox/service_requests_poc.duckdb`;
+never use an operational database. RAW is latest-observed state, not a history of
+versions. run_id and snapshot_id must both be explicit in every dbt build.
 
-Sólo se materializa `dbt_staging.stg_service_requests`. Las fuentes operativas son
-`main.raw_requests`, `main.run_members` y `main.pipeline_runs`; el metadato auxiliar
-`main.dbt_poc_snapshot` existe exclusivamente en la POC. run_id e snapshot_id son
-obligatorios y las huellas deben concordar. Un run_id no reconstruye payloads
-históricos. Mantener todas las conexiones Python cerradas antes de invocar dbt.
+The CLI verifies all six outputs, not only staging. Generated databases, target,
+logs and packages remain ignored. Full commands, model mapping, other local paths,
+edge scenarios and documentation/lineage instructions are in the
+[integration guide](../docs/migration/dbt_integration.md).
 
-Tests completos: `uv run --frozen --group dbt pytest`. Tests originales sin dbt:
-`uv run --frozen pytest tests/test_extract.py tests/test_models.py`.
-El nuevo test de subprocess dbt se omite explícitamente si no está instalado.
-
-La documentación se genera en `analytics/target/`; `dbt docs serve --project-dir
-analytics --profiles-dir analytics --port 8080` permite explorar catálogo y DAG
-localmente. No se publica ni se versiona ese directorio.
-
-Ver [baseline](../docs/migration/dbt_baseline.md),
-[ADR](../docs/decisions/ADR-001-dbt-integration.md) e
-[integración, resultados y límites](../docs/migration/dbt_integration.md).
+See [ADR-002](../docs/decisions/ADR-002-dbt-model-migration.md) and
+[actual validation results](../docs/validation/dbt_full_parity.md).
