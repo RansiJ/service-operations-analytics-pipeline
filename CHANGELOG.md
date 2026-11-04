@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Phase 2.6 — publication and repository presentation
+
+- Merge reviewed PR #1 after confirming its original head and all four hosted
+  Ubuntu/Windows checks; preserve the separate commits and parallel dbt scope.
+- Publish the existing aggregate dashboard through the unchanged Pages workflow;
+  verify HTTP 200 for HTML/JS and exact hashes against its deployment artifact.
+- Promote the verified dashboard link and repository website metadata; replace
+  obsolete publication warnings while retaining the fixed observation period and
+  explicit pending desktop/mobile browser QA. Keep version 1.0.0.
+
 ### Phase 2.5 — CI stabilization and publication preparation
 
 - Add a separate dbt job on Ubuntu/Windows, preserving the base matrix

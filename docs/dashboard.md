@@ -1,11 +1,9 @@
 # Interactive aggregate dashboard
 
-**Intended public URL:** [NYC 311 | Service Operations Analytics](https://ransij.github.io/service-operations-analytics-pipeline/).
-An HTTP check on November 4, 2026 returned **404**. Status:
-**ready for manual publication / not verified**. Pages is already configured for
-GitHub Actions, but the dashboard workflow has not been pushed to public main
-and no github-pages deployment was found. Use the local build below. Earlier
-publication statements are historical context, not evidence of a deployed dashboard.
+**Public dashboard:** [NYC 311 | Service Operations Analytics](https://ransij.github.io/service-operations-analytics-pipeline/).
+Published through GitHub Actions on November 4, 2026. The public HTML and Plotly
+runtime returned HTTP 200 and matched the deployment artifact byte for byte.
+Browser rendering and desktop/mobile interactions remain **not visually verified**.
 
 The pipeline remains the source of analytical definitions. This small presentation layer reads its verified aggregates, checks their integrity and exports five Plotly figures into a static HTML/CSS page. It introduces no database, API extraction, web framework or Python server.
 
@@ -60,32 +58,29 @@ Unresolved requests are excluded from resolution statistics, and request mix, co
 
 Pushes affecting the builder, its template, evidence, dependency files, dashboard tests or Pages workflow deploy the committed snapshot. Manual `workflow_dispatch` is also supported. Existing CI and data-refresh workflows are preserved. A successful data-refresh artifact does **not** automatically replace dashboard evidence: review and publish a coherent set of aggregates plus its matching summary to update the snapshot. No NYC API call occurs during dashboard generation or deployment.
 
-## Publication status and manual steps
+## Publication status and verification
 
-Read-only checks in phase 2.5 found `has_pages=true`, `build_type=workflow`, public
-main at `5dc3143`, only CI/data-refresh workflows remotely and no github-pages
-deployments. The feature branch is not on origin. This explains the current
-publication blocker without assuming that Pages is disabled or configured incorrectly.
-The existing pages.yml needs no code change: pinned actions resolve, site/ is the
-upload path, build permissions are read-only, and Pages/OIDC writes belong to deploy.
+[PR #1](https://github.com/RansiJ/service-operations-analytics-pipeline/pull/1)
+was merged with a merge commit at `cd346f23ceaf592bff4ccf9f778a3feeb451e810`
+on November 4, 2026 at 22:37:27 UTC, retaining the reviewed head `dbf9d3f`.
+Its four base/dbt Ubuntu/Windows checks passed before integration.
 
-After authorization to publish:
+The merge automatically triggered the existing
+[Pages workflow](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/runs/41926900973):
+both build and deploy succeeded. Pages uses the GitHub Actions publishing source;
+no workflow, general permissions or ingestion settings needed changing.
 
-1. Review/commit the local changes and push `feature/dbt-analytics-layer`. Open a PR
-   and wait for the four base/dbt Ubuntu/Windows CI checks. No remote dbt run is
-   verified yet; the proposed workflow can also be dispatched on the feature ref.
-2. Once those checks pass and merge is authorized, merge the reviewed changes to main.
-3. In **Settings → Pages → Build and deployment**, verify **Source: GitHub Actions**.
-   That value is already set according to the API; no change was made here.
-4. In **Actions → Deploy analytics dashboard → Run workflow**, select main and
-   run it if the matching main push did not trigger it. Confirm both build and
-   deploy succeed and record the run URL.
-5. Check the public HTML and `assets/plotly.min.js` return 200; inspect populated
-   charts and relative asset loading on desktop and mobile. Only then label the
-   dashboard verified deployed and promote its public link in the README.
+At 22:38 UTC, the public `index.html` (59,082 bytes) and
+`assets/plotly.min.js` (4,851,164 bytes) returned HTTP 200. Both SHA-256 hashes
+matched the downloaded artifact from that run. The HTML references the relative
+runtime path and contains five Plotly figures. Local Windows generation produced
+the same content after normalizing CRLF/LF line endings. These structural and HTTP
+checks establish publication, not visual or interaction quality.
 
-Do not run the ingestion workflow to publish this fixed dashboard. No push, merge,
-workflow dispatch, Settings change or deployment occurred during stabilization.
+For future snapshot updates, review the complete aggregate evidence first. A matching
+main push triggers deployment; otherwise dispatch **Deploy analytics dashboard**
+on main. Verify build/deploy, both public resources and browser behavior afterward.
+Do not run the ingestion workflow solely to publish this fixed dashboard.
 
 ## Verification and limits
 
@@ -97,6 +92,12 @@ populated figures, one local runtime reference, expected KPI values, unique char
 IDs and absence of exported row-level CSVs. Current counts and platform limits are
 reported separately in [phase 2.5 validation](validation/stabilization_phase2_5.md).
 
-Browser automation was attempted through the available browser tools; no browser was connected, and both the integrated browser and Chrome reported unavailable. Browser rendering, hover/zoom interactions and mobile visual layout have therefore **not been visually verified** in this session. The responsive layout, Plotly controls and static export are implemented, with structural tests; these do not substitute for in-browser QA. No browser screenshot is claimed.
+The browser connection host was unavailable during phase 2.6. Browser rendering,
+hover/zoom, Top N interactions and mobile visual layout have therefore **not been
+visually verified**. The responsive layout, Plotly controls and static export have
+structural tests; these do not substitute for in-browser QA. No browser screenshot
+is claimed. Manual desktop/mobile inspection remains pending.
 
-The site can be HTTP-checked independently of visual QA. The deployment workflow's result, public URL response and referenced JavaScript asset are checked after publication. Static snapshot age and unresolved-case bias remain analytical limitations even when the site deploys successfully.
+The deployment result, public HTML and referenced JavaScript were verified after
+publication. Static snapshot age and unresolved-case bias remain analytical
+limitations even when the site deploys successfully.

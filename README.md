@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/workflows/ci.yml)
 
-[Run the dashboard locally](docs/dashboard.md#reproduce-locally) · [Recorded results](docs/results.md) · [Architecture](#architecture) · [Methodology](docs/data_dictionary.md) · [dbt guide](docs/migration/dbt_integration.md)
+[Open the dashboard](https://ransij.github.io/service-operations-analytics-pipeline/) · [Run locally](docs/dashboard.md#reproduce-locally) · [Recorded results](docs/results.md) · [Architecture](#architecture) · [Methodology](docs/data_dictionary.md) · [dbt guide](docs/migration/dbt_integration.md)
 
 ## Project at a glance
 
@@ -20,7 +20,7 @@
 
 *Authentic Matplotlib preview of the fixed cohort, observed October 15, 2026 at 00:32 UTC. The existing Plotly dashboard uses the same aggregate evidence. This is a historical snapshot, not live monitoring.*
 
-The intended [GitHub Pages URL](https://ransij.github.io/service-operations-analytics-pipeline/) returned **404 on November 4, 2026**. Pages is configured for GitHub Actions, but the dashboard workflow is not yet on main and no Pages deployment was found. Use the local dashboard instructions below. Status: **ready for manual publication / not verified**. [Publication steps](docs/dashboard.md#publication-status-and-manual-steps).
+The dashboard is published on **GitHub Pages** from verified static aggregates: requests created October 1–7, 2026, observed October 15 at 00:32:06 UTC. On November 4, 2026, the public HTML and local Plotly runtime returned HTTP 200 and matched the deployed artifact exactly. Desktop/mobile rendering and interactions remain unverified in-browser. [Deployment evidence, scope and verification limits](docs/dashboard.md#publication-status-and-verification).
 
 ## Architecture
 
@@ -106,7 +106,7 @@ Recorded real-data cohort: **October 1–7, 2026**, observed **October 15 at 00:
 | Requests with quality flags | 1,866 (2.3781%) |
 | ETL/ELT subset mismatches | 0 of 1,000 |
 
-[Original results and evidence](docs/results.md) document these figures. [Phase 2 validation](docs/validation/dbt_full_parity.md) records synthetic full parity. This branch configures separate base and dbt jobs on Ubuntu and Windows; the dbt job rejects skipped tests and verifies a fresh isolated database. Read hosted outcomes in the PR checks and [branch CI runs](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/workflows/ci.yml?query=branch%3Afeature%2Fdbt-analytics-layer). The badge above reflects published `main`, independently of the feature branch. [Local checks and publication status](docs/validation/stabilization_phase2_5.md).
+[Original results and evidence](docs/results.md) document these figures. [Phase 2 validation](docs/validation/dbt_full_parity.md) records synthetic full parity. Separate base and dbt CI jobs run on Ubuntu and Windows; the dbt job rejects skipped tests and verifies a fresh isolated database. All four checks passed on the [reviewed PR #1](https://github.com/RansiJ/service-operations-analytics-pipeline/pull/1). See [main CI runs](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/workflows/ci.yml?query=branch%3Amain) for current hosted results and [phase 2.5 validation](docs/validation/stabilization_phase2_5.md) for the earlier stabilization record.
 
 This is a creation cohort, not the citywide backlog. Resolution statistics exclude unresolved cases and depend on cohort age and request mix. Business dates are floating NYC wall-clock timestamps, making intervals near DST changes approximate. A closure is not evidence of satisfaction; no SLA, causal effect or agency-performance ranking is claimed.
 
