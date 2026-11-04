@@ -4,7 +4,8 @@ models:
     description: >-
       One identifiable request per explicit cohort on a validated test snapshot.
       Preserves malformed dates as null, anomalous rows and unknown statuses.
-      Business dates remain floating NYC timestamps. No aggregates or quality rules migrated.
+      Business dates remain floating NYC timestamps. Classification and quality
+      are downstream, so staging never drops anomalous requests.
     columns:
       - name: request_id
         description: Original text unique_key, unchanged.

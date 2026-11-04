@@ -1,4 +1,4 @@
--- Only the normalized CTE from transform.sql; classification/quality/marts stay there.
+-- The normalized CTE from transform.sql, with explicit cohort/snapshot provenance.
 select
     r.unique_key as request_id,
     try_cast(nullif(trim(r.created_date), '') as timestamp) as created_at,

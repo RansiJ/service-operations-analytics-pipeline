@@ -1,9 +1,17 @@
 {% macro poc_literal(name) -%}
+  {{ poc_target_guard() }}
   {% set value = var(name) %}
   {% if value is not string or not value | trim %}
     {{ exceptions.raise_compiler_error(name ~ ' must be an explicit nonempty string') }}
   {% endif %}
   '{{ value | replace("'", "''") }}'
+{%- endmacro %}
+
+{% macro poc_target_guard() -%}
+  {# Called while parsing models, before dbt's schema creation and run hooks. #}
+  {% if target.schema != 'dbt_staging' or not target.path.endswith('_poc.duckdb') %}
+    {{ exceptions.raise_compiler_error('POC requires dbt_staging and a *_poc.duckdb test database') }}
+  {% endif %}
 {%- endmacro %}
 
 {% macro poc_fingerprint(relation, order_by) -%}
@@ -14,9 +22,7 @@
 {% macro validate_poc_snapshot() %}
   {% set run_id = poc_literal('run_id') %}
   {% set snapshot_id = poc_literal('snapshot_id') %}
-  {% if target.schema != 'dbt_staging' or not target.path.endswith('_poc.duckdb') %}
-    {{ exceptions.raise_compiler_error('POC requires dbt_staging and a *_poc.duckdb test database') }}
-  {% endif %}
+  {{ poc_target_guard() }}
   {% if execute %}
     {% set validation %}
       select count(*) from {{ source('poc', 'dbt_poc_snapshot') }} s
