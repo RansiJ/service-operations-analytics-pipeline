@@ -1,0 +1,37 @@
+version: 2
+models:
+  - name: stg_service_requests
+    description: >-
+      One identifiable request per explicit cohort on a validated test snapshot.
+      Preserves malformed dates as null, anomalous rows and unknown statuses.
+      Business dates remain floating NYC timestamps. Classification and quality
+      are downstream, so staging never drops anomalous requests.
+    columns:
+      - name: request_id
+        description: Original text unique_key, unchanged.
+        data_tests: [not_null, unique]
+      - {name: created_at, description: 'Original SQL TRY_CAST to TIMESTAMP; null is allowed.'}
+      - {name: closed_at, description: 'Original SQL TRY_CAST to TIMESTAMP; null/negative intervals are allowed.'}
+      - name: agency
+        description: Uppercase code with collapsed whitespace; UNKNOWN fallback.
+        data_tests: [not_null]
+      - name: category
+        description: Uppercase complaint_type with collapsed whitespace; UNKNOWN fallback.
+        data_tests: [not_null]
+      - name: source_status
+        description: Normalized source label; unknown labels retained without lifecycle classification.
+        data_tests: [not_null]
+      - {name: agency_name, description: 'Trimmed name; Unknown fallback; internal spacing retained.'}
+      - {name: borough, description: 'Trimmed uppercase borough; internal spacing retained.'}
+      - {name: raw_closed_date, description: 'Original closure string retained for future quality flags.'}
+      - {name: source_updated_at, description: 'UTC provenance parsed as TIMESTAMPTZ.'}
+      - {name: observed_at, description: 'Original RAW fetched_at, not dbt execution time.'}
+      - name: run_id
+        description: Selected membership cohort, never inferred from last_run_id.
+        data_tests: [not_null]
+      - name: last_run_id
+        description: Last observation of this RAW payload; may differ from run_id.
+        data_tests: [not_null]
+      - name: snapshot_id
+        description: Explicit validated POC snapshot identity.
+        data_tests: [not_null]

@@ -1,0 +1,11 @@
+version: 2
+models:
+  - name: int_service_requests_classified
+    description: >-
+      Ephemeral classification at one request per selected membership. Preserves
+      all staging columns. CLOSED is closed; five explicit labels are open;
+      anything else is unknown. No rows are removed.
+    columns:
+      - {name: request_id, description: 'Unchanged source identifier; same grain as staging.'}
+      - {name: created_day, description: 'DATE of the floating NYC created_at; null allowed.'}
+      - {name: lifecycle, description: 'closed, open or unknown, derived only from source_status.'}

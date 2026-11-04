@@ -1,163 +1,126 @@
 # Service Operations Analytics Pipeline
 
+**NYC 311 requests, from API ingestion to traceable operational analytics with Python, SQL, DuckDB and a parallel dbt layer.**
+
 [![CI](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/workflows/ci.yml)
 
-A reproducible **Python + SQL + DuckDB** pipeline that turns a bounded cohort of real NYC 311 requests into operational metrics and Power BI-ready CSV datasets. SQL performs the main ELT transformations; a small Python ETL example demonstrates the difference and checks equivalent results.
+[Run the dashboard locally](docs/dashboard.md#reproduce-locally) · [Recorded results](docs/results.md) · [Architecture](#architecture) · [Methodology](docs/data_dictionary.md) · [dbt guide](docs/migration/dbt_integration.md)
 
-**Verified local result:** 78,466 requests created October 1–7, 2026; 38 automated tests; zero ETL/ELT mismatches in a 1,000-request comparison. See [actual results](docs/results.md) for observation time, denominators and verification evidence.
+## Project at a glance
 
-![Static preview based on actual pipeline results](docs/evidence/dashboard_preview.png)
+| Question | Implemented answer |
+|---|---|
+| What problem does it address? | Understand demand, observed closures and data-quality issues in a bounded NYC 311 creation cohort. |
+| What did I build? | API extraction, RAW UPSERT and cohort tracking, SQL models, validation, ETL/ELT comparison, reproducible exports and an aggregate dashboard. |
+| What does dbt add? | An experimental eight-model analytical DAG, tested in parallel against all six original SQL outputs on isolated synthetic snapshots. |
+| What evidence is available? | 78,466 real requests created October 1–7, 2026; zero recorded ETL/ELT mismatches in a 1,000-request subset. Separate offline tests validate the dbt migration. |
+| Stack | Python 3.12, SQL, DuckDB, dbt Core/dbt-duckdb, Requests, pytest, uv, Matplotlib, Plotly and GitHub Actions. |
 
-*This image is a Matplotlib preview. A native Power BI report has not been built.*
+![Existing preview of the recorded NYC 311 cohort](docs/evidence/dashboard_preview.png)
 
-## Business problem
+*Authentic Matplotlib preview of the fixed cohort, observed October 15, 2026 at 00:32 UTC. The existing Plotly dashboard uses the same aggregate evidence. This is a historical snapshot, not live monitoring.*
 
-An operations analyst needs to understand incoming demand, which agencies and categories receive requests, how many cohort requests remain open, and how observed closure times vary. Source inconsistencies must be visible before interpreting the indicators.
-
-This project answers those questions for a **creation-date cohort**, not for the entire NYC backlog. It does not define official targets or SLAs, rank agency effectiveness, or infer causes from request counts.
-
-## Data source
-
-- [NYC Open Data: 311 Service Requests from 2020 to Present](https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2020-to-Present/erm2-nwe9)
-- [Public JSON endpoint](https://data.cityofnewyork.us/resource/erm2-nwe9.json)
-- [Socrata API documentation](https://dev.socrata.com/) and [system-field semantics](https://dev.socrata.com/docs/system-fields.html)
-
-The live endpoint and metadata schema were verified on October 14, 2026 in Costa Rica. Relevant fields are selected explicitly; addresses, coordinates and resolution narratives are not downloaded. Source business dates are floating NYC local timestamps. Audit and source-update timestamps use UTC.
-
-The API exposes `:updated_at`, preserved as `source_updated_at`. It is an ingestion timestamp and is not treated as a precise operational change timestamp: Socrata documents that a full dataset replacement may update all rows. `resolution_action_updated_date` is also preserved, but is not assumed to capture every record change. See [API verification evidence](docs/evidence/api_verification.json).
+The intended [GitHub Pages URL](https://ransij.github.io/service-operations-analytics-pipeline/) returned **404 on November 4, 2026**. Pages is configured for GitHub Actions, but the dashboard workflow is not yet on main and no Pages deployment was found. Use the local dashboard instructions below. Status: **ready for manual publication / not verified**. [Publication steps](docs/dashboard.md#publication-status-and-manual-steps).
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    A[NYC 311 public API / bounded creation cohort] --> B[Python extraction / keyset pagination]
-    B --> C[DuckDB RAW / original fields and JSON / UPSERT]
-    C --> D[SQL normalization and quality flags]
-    D --> E[Requests and aggregate analytics tables]
-    E --> F[Consistency checks / audit / CSV / static preview]
-    F --> G[Power BI import / documented report specification]
-    B --> H[Small ETL subset / Python date and status validation]
-    H --> I[DuckDB etl_demo target]
-    I --> J[ETL versus ELT parity check]
-    E --> J
+    subgraph original[Original operational pipeline]
+        A[NYC 311 API / bounded window] --> B[Python extraction]
+        B --> C[DuckDB RAW UPSERT + run membership]
+        C --> D[Original transform.sql]
+        D --> E[Requests / metrics / quality flags]
+        B --> F[Small Python ETL subset]
+        E --> G[QA + ETL/ELT comparison]
+        F --> G
+        G --> H[CSV + audit JSON + preview]
+        H --> I[Existing aggregate Plotly dashboard]
+    end
+    subgraph parallel[Experimental dbt path / isolated test database]
+        J[Deterministic fixtures + explicit run/snapshot] --> K[Original loader + SQL reference]
+        K --> L[dbt staging]
+        L --> M[Ephemeral classification]
+        M --> N[Request fact + five marts]
+        K --> O[Exact parity against six original outputs]
+        N --> O
+    end
 ```
 
-Extraction fails before downloading rows if the source count exceeds the configured cap. Requests use ascending **text** `unique_key` keyset pagination, not offset pagination. Counts before and after extraction, key monotonicity and schema checks detect incomplete or inconsistent reads. Three attempts, bounded backoff, and connect/read timeouts handle transient failures. API calls do not provide snapshot isolation; count checks cannot detect every concurrent edit.
+The original Python pipeline remains the operational entry point. dbt is validated separately and is **not invoked by `pipeline.py`**. Its models cover normalization, lifecycle, overlapping quality rules, duration eligibility, global/daily/category/agency metrics and quality-rule frequencies. See the [model mapping and decisions](docs/decisions/ADR-002-dbt-model-migration.md).
 
-RAW loads, SQL transformations, model checks and staged exports run inside a DuckDB transaction. Failures roll back data changes and retain a failed run audit. Successful output directories are immutable and named by run UUID; `outputs/latest.json` points to the most recently published directory. Filesystem publication and the database commit are separate operations: check `pipeline_runs.status` after a filesystem error. One writer at a time is supported.
+## What this project demonstrates
 
-### Controlled refresh and idempotence
+- **Data engineering:** bounded keyset pagination, RAW evidence preservation, UPSERT and explicit run membership.
+- **Analytics engineering:** dbt sources/refs, documented grains and denominators, modular SQL and exact model parity.
+- **Data quality:** anomalous requests remain traceable; flags, missing values and eligible durations have explicit semantics.
+- **Validation and reproducibility:** offline fixtures, rollback tests, repeatable exports, a pinned environment and an independent SQL reference.
+- **Analytical communication:** request demand and observed closure distributions with scope, provenance and interpretation limits.
 
-Every run rereads its entire bounded creation window and UPSERTs RAW by `unique_key`. This captures changed statuses and late arrivals inside that window without an unbounded global update scan. `run_members` defines exact current-run membership, so older RAW rows do not leak into the current analytics tables. Analytics tables represent **only the latest modeled cohort**, while RAW keeps the latest observed payload for each ID encountered locally.
+## Quick start
 
-The same input produces identical business metrics and aggregate CSVs; observation timestamps and run IDs intentionally change. A different live-source snapshot can legitimately change results. Older windows must be explicitly refreshed to capture later closures. RAW is not a full change-history archive. Audit tables and local output folders accumulate until the user archives or removes them; they are excluded from Git.
+Run all commands from the repository root with Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
-## ETL vs. ELT implementation
-
-| Approach | Implemented order | Benefit | Limitation / suitable use |
-|---|---|---|---|
-| Main ELT | Extract → load original strings and JSON → SQL transform/validate | Retains source evidence and keeps analytics logic in SQL | Requires storage and database transformation support; useful for auditable analytics |
-| Small ETL demo | Reuse extracted subset → Python parse dates, classify status, flag date/status issues → load `etl_demo` | Validates a compact target before insertion | Earlier rules can discard context unless rejects are preserved; useful for constrained targets or required pre-load validation |
-
-ETL uses at most 1,000 requests by default (configurable up to 5,000), ordered by source ID. It is a teaching subset, not a representative sample. It deliberately covers only date/status fields and resolution duration; it does not duplicate all category models or reporting. Every pipeline run compares ETL dates, lifecycle and resolution hours against ELT for the same IDs. Tests also compare total, open count and median on an identical deterministic subset.
-
-## Tech stack
-
-Python 3.12, DuckDB SQL, Requests, Matplotlib, pytest, uv, Git and GitHub Actions. CSV is the Power BI interchange format. No cloud database, orchestration server or paid service is required. `uv.lock` fixes dependency versions; wheel builds include SQL resources. `tzdata` supplies Windows timezone data.
-
-## Repository structure
-
-```text
-.github/workflows/        Offline CI and bounded live refresh
-src/service_analytics/
-  extract.py             HTTP retries, bounds and pagination
-  pipeline.py            RAW load, orchestration, QA, audits and CSV export
-  etl.py                 Small Python-before-load demonstration
-  schema.sql             RAW, membership, rejection and run audit tables
-  transform.sql          SQL models, metrics and quality rules
-  preview.py             Static analytical preview
-tests/                   Small deterministic fixtures and mocked API responses
-docs/
-  data_dictionary.md     Fields, quality rules and metric denominators
-  power_bi.md            Import, DAX, relationships and report layout
-  results.md             Measured results and interpretation limits
-  evidence/              Small aggregate snapshots and verified preview
-data/                    Local DuckDB file (ignored)
-outputs/                 Per-run CSVs, summary and preview (ignored)
-```
-
-## Setup and execution
-
-Install Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/), then run from the project directory:
+### Offline tests and existing dashboard
 
 ```shell
 uv sync --frozen
 uv run --frozen pytest
-uv run --frozen service-analytics --start 2026-10-01 --end 2026-10-08
+uv run --frozen python -m service_analytics.dashboard
 ```
 
-The start date is inclusive and the end date exclusive. Allowed windows are 1–31 days. The default cap is 100,000 rows and the hard maximum is also 100,000; exceeding it fails rather than returning a truncated sample. The API is public and needs no token for this bounded usage.
+Open `site/index.html`. This path uses the committed aggregate evidence and never queries NYC 311. The dashboard's five figures use a local Plotly runtime; no server or CDN is required. The base environment works without dbt; optional dbt subprocess tests are explicitly skipped.
+
+### Isolated dbt analytics
 
 ```shell
-uv run --frozen service-analytics --start 2026-10-01 --end 2026-10-03 --max-records 25000 --page-size 5000 --etl-sample-size 500
+uv sync --frozen --group dbt
+uv run --frozen --group dbt python -m service_analytics.dbt_poc prepare
+uv run --frozen --group dbt dbt build --project-dir analytics --profiles-dir analytics --vars '{run_id: poc-selected, snapshot_id: poc-fixture-v1}'
+uv run --frozen --group dbt python -m service_analytics.dbt_poc verify
+uv run --frozen --group dbt pytest
 ```
 
-Without dates, the CLI extracts the single NYC calendar day **before yesterday**, allowing some source publication lag. This is not a guarantee that the source is complete. Logs go to standard error; the final JSON includes the output path, audit counts, metrics and CSV hashes. To inspect a past run, open its `run_summary.json` and consult the local `pipeline_runs` table.
+Preparation creates a new `analytics/sandbox/service_requests_poc.duckdb` and refuses to overwrite files. On later runs reuse that known snapshot and omit `prepare`. Both dbt variables are mandatory. Use `--group dbt` on every experimental uv command. The [integration guide](docs/migration/dbt_integration.md) includes larger edge fixtures, connection checks and documentation/lineage generation.
 
-To keep the environment outside this project on PowerShell, optionally set `UV_PROJECT_ENVIRONMENT` to an external directory before `uv sync`. The default `.venv` is already ignored. Do not commit generated databases, row-level datasets or credentials.
+**Phase 2 remains experimental:** dbt writes only to `dbt_staging` in the POC database. Verification compares all columns and types of the six original outputs, while checking that all ten original POC tables retain their fingerprints. These fixture results do not claim full-dataset migration or operational deployment.
 
-## Data quality and testing
+### Live ingestion (separate, optional)
 
-Requests with usable IDs are retained even if dates, status, agency or category are problematic. Missing IDs are quarantined in `raw_rejections` with original JSON. In-batch duplicates use the last payload and are counted; API pagination rejects duplicate IDs. A request can have multiple quality flags. Normalized labels collapse whitespace and use uppercase without merging different business categories.
+```shell
+uv run --frozen service-analytics --start 2026-10-01 --end 2026-10-08 --max-records 100000
+```
 
-The deterministic test suite covers extraction, keyset pagination, caps, transient/non-transient HTTP failures, timeouts, source count drift, missing data, malformed dates, duplicates, normalization, flags, metric denominators, zero-volume days, ETL/ELT parity, UPSERT changes, membership, repeatability and rollback. Offline end-to-end tests compare byte-identical aggregate CSVs across reruns. Tests never require a live API. The live run is separate [recorded evidence](docs/results.md).
+This command calls the public NYC API. Creation windows are start-inclusive/end-exclusive, 1–31 days, with a hard 100,000-row cap. Source changes can alter historical results or cause a bounded extraction to fail. [Operational commands, outputs and recovery semantics](docs/pipeline.md).
 
-Checks enforce unique model IDs, correct RAW/model counts, status and quality partitions, nonnegative eligible durations, and reconciliation of agency/category/daily totals. Quality flags warn without silently removing rows. An empty cohort emits a processing warning. A daily volume review marker requires seven prior days and volume at least 1.5 times their mean; it is a descriptive heuristic, not a statistical anomaly model. The seven-day recorded run has insufficient baseline for that marker.
+## Results and limitations
 
-## Analytics outputs
+Recorded real-data cohort: **October 1–7, 2026**, observed **October 15 at 00:32:06 UTC** (October 14 at 18:32:06 in Costa Rica).
 
-| File | Grain / purpose |
-|---|---|
-| `requests.csv` | One current-cohort request; filters and recalculable KPIs |
-| `metrics.csv` | One row of cohort-wide counts, median and quality rate |
-| `daily_metrics.csv` | One row per requested day, including zero-volume dates |
-| `category_metrics.csv` | One row per normalized category |
-| `agency_metrics.csv` | One row per normalized agency |
-| `quality_issues.csv` | One row per triggered rule |
-| `request_quality_flags.csv` | One request/rule pair; preserves overlapping issues |
-| `etl_demo.csv` | Limited ETL target for explanation and comparison |
-| `run_summary.json` | Provenance, counters, warnings, parity results and CSV hashes |
-| `dashboard_preview.png` | Static visual preview of real results |
-
-Full [data dictionary and metric definitions](docs/data_dictionary.md) and [Power BI instructions](docs/power_bi.md) accompany these outputs. No `.pbix` file is supplied. The Git repository contains only small aggregate evidence, not the full row-level export.
-
-## Actual results
-
-Real requests created October 1–7, 2026, observed October 14 in Costa Rica (October 15 UTC):
-
-| Indicator | Result |
+| Recorded indicator | Value |
 |---|---:|
-| Extracted / loaded requests | 78,466 / 78,466 |
-| Open / closed / unknown status | 17,360 / 61,098 / 8 |
-| Eligible resolution intervals | 61,053 |
-| Median observed resolution | 3.3908 hours |
+| Accepted requests | 78,466 |
+| Open / closed / unknown | 17,360 / 61,098 / 8 |
+| Eligible closure intervals | 61,053 |
+| Median eligible resolution | 3.3908 hours |
 | Requests with quality flags | 1,866 (2.3781%) |
-| Missing-ID rejections / duplicate inputs | 0 / 0 |
 | ETL/ELT subset mismatches | 0 of 1,000 |
 
-The largest category was **ILLEGAL PARKING (13,664)** and the largest agency by request count was **NYPD (36,351)**. These are demand counts, not effectiveness scores. The most frequent rule was `open_with_closed_date` (1,813 requests). See [results and repeat-run verification](docs/results.md) and [small actual CSV outputs](docs/evidence/).
+[Original results and evidence](docs/results.md) document these figures. [Phase 2 validation](docs/validation/dbt_full_parity.md) records synthetic full parity. This branch configures separate base and dbt jobs on Ubuntu and Windows; the dbt job rejects skipped tests and verifies a fresh isolated database. Read hosted outcomes in the PR checks and [branch CI runs](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/workflows/ci.yml?query=branch%3Afeature%2Fdbt-analytics-layer). The badge above reflects published `main`, independently of the feature branch. [Local checks and publication status](docs/validation/stabilization_phase2_5.md).
 
-## Automation
+This is a creation cohort, not the citywide backlog. Resolution statistics exclude unresolved cases and depend on cohort age and request mix. Business dates are floating NYC wall-clock timestamps, making intervals near DST changes approximate. A closure is not evidence of satisfaction; no SLA, causal effect or agency-performance ranking is claimed.
 
-- **CI:** push to `main`, pull requests and manual execution; Python 3.12 on Linux and Windows; locked dependencies, offline tests and a Linux wheel/resource smoke check.
-- **Bounded public-data refresh:** manual dates (maximum 100,000 rows), or Monday at 10:23 UTC / 04:23 Costa Rica using the default one-day window (maximum 25,000 rows). Runs tests first, then exports an artifact retained for 14 days. It does not commit data or reuse a database from a prior runner.
+RAW stores the latest payload observed for each ID. `run_members` identifies cohort membership, **not historical payload versions**. API count checks detect some changes during pagination but do not provide snapshot isolation. Quality flags can overlap and never silently remove otherwise identifiable requests. No native Power BI `.pbix` is supplied.
 
-Actions use pinned commit SHAs and read-only repository permissions. Source outages, rate limits, runner delays, schema changes or volume caps can fail a live run; these failures are visible in Actions and its diagnostic log. CI passing does not prove API availability. Scheduled runners are ephemeral: refresh a historical window manually to capture later closures. The weekly job is a bounded execution demonstration, not continuous citywide monitoring. Public repository artifacts contain only selected public-source fields.
+## Documentation and engineering decisions
 
-**Publication verified:** [Linux and Windows CI passed](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/runs/38660978021), and a [manual real-data run passed and produced a downloadable artifact](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/runs/38660987609). All eight downloaded CSV hashes were verified, and its metrics matched the recorded local results. [Verification record](docs/evidence/publication_verification.json).
+- [Metric definitions, quality rules and provenance](docs/data_dictionary.md)
+- [Original pipeline operation and exports](docs/pipeline.md)
+- [Recorded real-data results](docs/results.md) and [dashboard scope](docs/dashboard.md)
+- [dbt setup, model map and reproduction](docs/migration/dbt_integration.md)
+- [Baseline audit](docs/migration/dbt_baseline.md), [ADR-001: engine choice](docs/decisions/ADR-001-dbt-integration.md), [ADR-002: model migration](docs/decisions/ADR-002-dbt-model-migration.md)
+- [Full parity and regression results](docs/validation/dbt_full_parity.md)
+- [CI stabilization, platform evidence and publication checklist](docs/validation/stabilization_phase2_5.md)
+- [Power BI import specification](docs/power_bi.md) and [Unreleased changes](CHANGELOG.md)
 
-## Limitations and future improvements
-
-The source can change during pagination; no cross-request snapshot guarantee is available. Floating dates make elapsed durations around DST transitions approximate wall-clock hours. Resolution statistics exclude unresolved cases and are affected by cohort age and agency/category mix. A closed request is not proof of service satisfaction. Open requests with closure dates need source-domain investigation.
-
-Coverage is limited to the requested creation cohort. No official backlog, SLA, causal analysis, historical state reconstruction, inferential anomaly detection, native Power BI file, or machine learning model is implemented. Local audit storage has no automatic retention policy. A native Power BI report using the supplied specification is the main presentation step still pending. Further work should be driven by a concrete analytical need, such as an explicit historical-cohort refresh policy or a longer comparison window split into bounded runs.
+Version remains **1.0.0**. Phase 3 must address writer coordination, snapshot policy, transaction/publication recovery and operational cutover before dbt can replace the original transformation path.

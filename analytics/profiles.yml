@@ -1,0 +1,11 @@
+service_operations_poc:
+  target: poc
+  outputs:
+    poc:
+      type: duckdb
+      # Run commands from the repository root; optional override is for test files.
+      path: "{{ env_var('DBT_POC_DATABASE', 'analytics/sandbox/service_requests_poc.duckdb') }}"
+      schema: dbt_staging
+      threads: 1
+      settings:
+        TimeZone: UTC

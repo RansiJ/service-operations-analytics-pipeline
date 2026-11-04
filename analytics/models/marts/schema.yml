@@ -1,0 +1,114 @@
+version: 2
+models:
+  - name: fct_service_requests
+    description: >-
+      Equivalent to historical requests: one accepted ID in the selected cohort,
+      including anomalous requests. Quality rules overlap. Its schema deliberately
+      matches the original; snapshot/run provenance remains in staging.
+    columns:
+      - name: request_id
+        description: Original text ID; no rekeying.
+        data_tests: [not_null, unique]
+      - {name: created_at, description: 'Floating NYC creation TIMESTAMP; null if unparseable.'}
+      - {name: closed_at, description: 'Floating NYC closure TIMESTAMP; null if unparseable.'}
+      - {name: agency, description: 'Original normalized agency code; UNKNOWN fallback.'}
+      - {name: agency_name, description: 'Trimmed original name; Unknown fallback.'}
+      - {name: category, description: 'Normalized complaint type without semantic merging.'}
+      - {name: borough, description: 'Trimmed uppercase source borough; UNKNOWN fallback.'}
+      - {name: source_status, description: 'Original normalized source status; unknown labels retained.'}
+      - {name: source_updated_at, description: 'Socrata update provenance as TIMESTAMPTZ, not a status-transition guarantee.'}
+      - {name: observed_at, description: 'RAW observation UTC TIMESTAMPTZ, not dbt execution time.'}
+      - {name: created_day, description: 'Calendar date of created_at; null dates are absent from daily totals.'}
+      - name: lifecycle
+        description: Exhaustive closed/open/unknown partition; based on source status only.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments: {values: [closed, open, unknown]}
+      - name: quality_flags
+        description: >-
+          Ordered non-null VARCHAR[] of up to eight original rules: invalid/missing
+          creation, invalid closure, negative interval, closed without date, open
+          with closure, unknown status, missing agency and missing category.
+          Multiple rules may apply; an empty list is valid.
+        data_tests: [not_null]
+      - {name: resolution_hours, description: 'Wall-clock hours only for closed with both dates and closed_at >= created_at; zero valid, otherwise null.'}
+      - name: is_valid
+        description: True exactly when the quality flag list is empty; not a factual certification.
+        data_tests: [not_null]
+      - name: resolution_band
+        description: Eligible duration intervals [0,24), [24,72), [72,168), >=168; Unavailable for null hours.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['0-24 hours', '24-72 hours', '72-168 hours', '168+ hours', Unavailable]
+  - name: mart_overall_metrics
+    description: 'Historical metrics: exactly one row, even for an empty cohort. All accepted IDs form count/quality denominators.'
+    columns:
+      - &total {name: total_requests, description: 'Count of accepted request IDs at this grain.'}
+      - &open {name: open_requests, description: 'Requests classified open.'}
+      - &closed {name: closed_requests, description: 'Requests classified closed, including ineligible intervals.'}
+      - &unknown {name: unknown_status_requests, description: 'Requests with unknown lifecycle.'}
+      - &eligible {name: resolution_eligible_requests, description: 'Count of non-null eligible durations; independent of other flags.'}
+      - &median {name: median_resolution_hours, description: 'Median eligible hours at this grain; null without eligible requests.'}
+      - &flagged {name: flagged_requests, description: 'Count of requests with at least one flag, not count of flags.'}
+      - {name: valid_requests, description: 'Count of requests with an empty quality flag list.'}
+      - {name: flagged_pct, description: '100 * flagged / total accepted; null when total is zero.'}
+  - name: mart_category_metrics
+    description: 'Historical category_metrics: one normalized category; no prefilter by validity.'
+    columns:
+      - name: category
+        description: Normalized complaint category, including UNKNOWN.
+        data_tests: [not_null, unique]
+      - *total
+      - *open
+      - *closed
+      - *unknown
+      - *eligible
+      - *median
+      - *flagged
+  - name: mart_agency_metrics
+    description: 'Historical agency_metrics: one normalized agency; volumes are not effectiveness scores.'
+    columns:
+      - name: agency
+        description: Normalized agency, including UNKNOWN.
+        data_tests: [not_null, unique]
+      - *total
+      - *open
+      - *closed
+      - *unknown
+      - *eligible
+      - *median
+      - *flagged
+  - name: mart_daily_metrics
+    description: 'Historical daily_metrics: one day in the audit window, start inclusive/end exclusive, including zero-volume days.'
+    columns:
+      - name: created_day
+        description: Requested floating NYC calendar date.
+        data_tests: [not_null, unique]
+      - *total
+      - *open
+      - *closed
+      - *unknown
+      - *eligible
+      - *median
+      - *flagged
+      - {name: previous_7day_mean, description: 'Mean over up to seven preceding requested days, including zeros; null for first day.'}
+      - {name: baseline_days, description: 'Number of preceding days present, capped at seven; never counts the current day.'}
+      - {name: volume_ratio, description: 'Current volume / prior mean only when baseline_days=7 and mean>0; otherwise null.'}
+      - {name: review_volume_spike, description: 'Full positive baseline and current volume >= 1.5 * mean; descriptive review flag, not a statistical model.'}
+  - name: mart_quality_issues
+    description: 'Historical quality_issues: one triggered rule; sum of frequencies can exceed flagged requests because flags overlap.'
+    columns:
+      - name: rule
+        description: One of the eight original quality rules; absent if never triggered.
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values: [missing_or_invalid_created_date, invalid_closed_date,
+                         negative_resolution_interval, closed_without_date,
+                         open_with_closed_date, unknown_status, missing_agency, missing_category]
+      - {name: affected_requests, description: 'Requests carrying this rule; each request can contribute to multiple rules.'}

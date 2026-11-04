@@ -12,6 +12,7 @@ dist/
 !.env.example
 data/
 outputs/
+site/
 *.duckdb*
 *.db
 *.parquet
@@ -19,3 +20,11 @@ outputs/
 tmp/
 .DS_Store
 Thumbs.db
+
+# Isolated dbt experiment; never commit generated or request-level artifacts.
+analytics/sandbox/
+analytics/target/
+analytics/logs/
+analytics/dbt_packages/
+analytics/.user.yml
+analytics/.dbt/
