@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive NYC 311 operations dashboard built from verified aggregate pipeline results. Explore demand, observed resolution times and data quality.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'">
+  <title>NYC 311 | Service Operations Analytics</title>
+  <style>
+    :root{--ink:#182b45;--muted:#58677b;--line:#e1e7ef;--blue:#2455b5;--teal:#147d82;--paper:#f5f7fb}
+    *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}
+    body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+    a{color:var(--blue);text-underline-offset:3px}a:hover{color:#122d69}a:focus-visible,summary:focus-visible{outline:3px solid var(--teal);outline-offset:4px}
+    .wrap{max-width:1380px;margin:auto;padding:0 40px}.topbar{border-bottom:1px solid var(--line);background:#fff}
+    .topbar .wrap{min-height:68px;display:flex;justify-content:space-between;align-items:center;gap:20px}
+    .brand{font-size:12px;font-weight:750;letter-spacing:.15em;color:var(--ink);text-decoration:none}.brand span{color:var(--muted);font-weight:400;letter-spacing:.08em}
+    .top-links{display:flex;gap:22px;font-size:13px}.top-links a{text-decoration:none}
+    .hero{display:grid;grid-template-columns:1fr auto;gap:35px;padding-top:42px;padding-bottom:30px}
+    .eyebrow{font-size:11px;letter-spacing:.13em;text-transform:uppercase;font-weight:750;color:var(--teal);margin:0 0 10px}
+    h1{font-size:clamp(25px,2.6vw,36px);line-height:1.25;letter-spacing:-.035em;margin:0 0 15px;font-weight:720}
+    .lede{max-width:710px;margin:0;color:var(--muted);font-size:15px}.snapshot{min-width:235px;padding-left:26px;border-left:2px solid var(--line);align-self:center}
+    .snapshot dt{font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:750;color:var(--muted)}
+    .snapshot dd{margin:3px 0 12px;font-size:13px;font-weight:600}.snapshot dd:last-child{margin-bottom:0}
+    .scope{display:flex;gap:12px;align-items:flex-start;background:#edf2fb;border:1px solid #dbe4f5;border-radius:8px;padding:14px 18px;font-size:13px;color:#354e75}
+    .scope strong{color:#183969}.scope p{margin:0}.scope-tag{flex-shrink:0;letter-spacing:.06em;font-weight:750;font-size:10px;border:1px solid #bdcee9;border-radius:4px;padding:2px 6px;margin-top:2px}
+    .kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:15px;margin:25px 0 22px}
+    .kpi{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px 19px 18px;box-shadow:0 2px 3px #182b4503;min-width:0}
+    .kpi h2{font-size:12px;font-weight:600;color:var(--muted);margin:0}.kpi p{font-size:11px;line-height:1.45;color:var(--muted);margin:0}
+    .kpi .kpi-value{font-size:32px;font-weight:720;letter-spacing:-.035em;line-height:1.25;color:var(--ink);margin:10px 0}
+    .kpi-value small{font-size:17px;margin-left:4px;font-weight:500}.kpi:nth-child(4) .kpi-value{color:var(--teal)}
+    .section-nav{display:flex;gap:22px;flex-wrap:wrap;margin:0 0 22px;padding-bottom:17px;border-bottom:1px solid var(--line);font-size:12px}
+    .section-nav a{text-decoration:none;color:var(--muted)}.section-nav a:hover{color:var(--blue)}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:23px 24px 12px;min-width:0;overflow:hidden}
+    .wide{grid-column:1/-1}.panel h2{font-size:17px;font-weight:670;letter-spacing:-.02em;margin:0 0 5px}.panel .intro{font-size:12px;color:var(--muted);margin:0;max-width:800px}
+    .chart{margin:5px -12px 0;min-width:0}.plotly-graph-div{max-width:100%}.chart-note{font-size:11px;color:var(--muted);margin:0 0 6px;padding:0 2px}
+    .panel-header{display:flex;justify-content:space-between;gap:14px;align-items:start}.index{font-size:11px;color:#8190a3;letter-spacing:.08em;font-weight:650;white-space:nowrap}
+    .quality-count{display:flex;align-items:baseline;gap:10px;margin:16px 0 0}.quality-count strong{font-size:26px;font-weight:720}.quality-count span{font-size:12px;color:var(--muted)}
+    .callout{font-size:12px;background:#f7f9fc;border-left:3px solid #cad6e8;padding:12px 14px;margin:10px 0 8px;color:var(--muted)}
+    details{margin:25px 0;border:1px solid var(--line);border-radius:10px;background:#fff;padding:17px 22px}summary{cursor:pointer;font-weight:650;font-size:13px}details p{font-size:12px;color:var(--muted)}
+    table{width:100%;border-collapse:collapse;font-size:12px;margin:15px 0}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:650;background:#f7f9fc}td:first-child{width:180px;font-weight:600}
+    footer{padding:10px 0 30px;font-size:11px;color:var(--muted)}.footer-links{display:flex;gap:20px;flex-wrap:wrap;margin:8px 0 15px}.run-id{font-family:ui-monospace,monospace;font-size:10px;overflow-wrap:anywhere}
+    noscript p{background:#fff1ce;padding:20px} @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+    @media(max-width:1100px){.wrap{padding:0 24px}.hero{grid-template-columns:1fr}.snapshot{display:flex;gap:30px;padding-left:0;border-left:0;margin:0}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.grid{grid-template-columns:1fr}.panel{padding:20px 18px 10px}}
+    @media(max-width:600px){.wrap{padding:0 16px}.topbar .wrap{min-height:60px}.brand span{display:none}.top-links{gap:12px;font-size:11px}.hero{padding-top:28px;gap:18px}.snapshot{display:block}.snapshot div{margin-bottom:12px}.scope-tag{display:none}.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kpi{padding:16px 13px}.kpi .kpi-value{font-size:28px}.kpi:last-child{grid-column:1/-1}.section-nav{gap:13px}.panel{padding:18px 10px 10px}.panel h2{font-size:16px}.chart{margin:5px -6px 0}.index{display:none}.quality-count{gap:7px}details{padding:15px 12px}th,td{padding:8px 5px}td:first-child{width:100px}.modebar{transform:scale(.85);transform-origin:top right}}
+  </style>
+  <script src="assets/plotly.min.js"></script>
+</head>
+<body>
+  <header class="topbar"><div class="wrap">
+    <a class="brand" href="@@repository@@">RANSIJ <span>/ ANALYTICS PORTFOLIO</span></a>
+    <div class="top-links"><a href="@@repository@@">Repository ↗</a><a href="@@repository@@/blob/main/docs/data_dictionary.md">Methodology ↗</a></div>
+  </div></header>
+  <main class="wrap">
+    <section class="hero" aria-labelledby="title">
+      <div><p class="eyebrow">Public service data · Verified snapshot</p><h1 id="title">NYC 311 | Service Operations Analytics</h1>
+      <p class="lede">Explore urban service demand, observed closure times and source-data consistency. Built from the verified aggregate outputs of a Python + SQL analytics pipeline.</p></div>
+      <dl class="snapshot"><div><dt>Creation period · NYC local</dt><dd>@@period@@</dd></div><div><dt>Data observed</dt><dd>@@observed@@</dd></div></dl>
+    </section>
+    <div class="scope"><span class="scope-tag">COHORT VIEW</span><p><strong>A fixed creation-date cohort, not the citywide backlog.</strong> Open and closed counts reflect the observation timestamp. This static snapshot does not fetch live API updates.</p></div>
+    <section class="kpis" aria-label="Full-cohort key indicators">@@kpis@@</section>
+    <nav class="section-nav" aria-label="Dashboard sections"><a href="#volume">01 / Volume</a><a href="#categories">02 / Categories</a><a href="#agencies">03 / Agencies</a><a href="#resolution">04 / Resolution</a><a href="#quality">05 / Quality</a></nav>
+    <noscript><p>JavaScript is required for interactive charts. The KPI cards and metric definitions remain available. Enable JavaScript to explore the five Plotly visualizations.</p></noscript>
+    <div class="grid">
+      <section id="volume" class="panel wide" aria-labelledby="volume-title"><div class="panel-header"><h2 id="volume-title">Request volume over time</h2><span class="index">01 / DEMAND</span></div>
+        <p class="intro">Daily incoming requests by creation date. Hover for observed statuses; drag to zoom, then use Reset axes or double-click to restore the view.</p>
+        <div class="chart" aria-label="Interactive daily request volume chart">@@volume@@</div>
+        <p class="chart-note">Chart interactions are local. KPI cards always describe the full snapshot; zooming does not filter them.</p>
+      </section>
+      <section id="categories" class="panel" aria-labelledby="categories-title"><div class="panel-header"><h2 id="categories-title">Where demand concentrates</h2><span class="index">02 / CATEGORIES</span></div>
+        <p class="intro">Request categories ranked by volume. The Top N menu changes this chart only.</p>
+        <div class="chart" aria-label="Interactive top request categories chart">@@categories@@</div>
+        <p class="chart-note">Normalized source categories; no semantic category merging.</p>
+      </section>
+      <section id="agencies" class="panel" aria-labelledby="agencies-title"><div class="panel-header"><h2 id="agencies-title">Requests by agency</h2><span class="index">03 / DISTRIBUTION</span></div>
+        <p class="intro">All agencies in the cohort, ordered by demand. Hover to inspect status counts.</p>
+        <div class="chart" aria-label="Interactive agency request volume chart">@@agencies@@</div>
+        <p class="chart-note">Higher volume does not imply worse performance. Agency responsibilities and request mix differ.</p>
+      </section>
+      <section id="resolution" class="panel" aria-labelledby="resolution-title"><div class="panel-header"><h2 id="resolution-title">Observed resolution times</h2><span class="index">04 / CONTEXT</span></div>
+        <p class="intro">Agency medians, ordered by request volume rather than speed. Hover for each eligible denominator.</p>
+        <div class="chart" aria-label="Interactive agency median eligible resolution time chart">@@resolution@@</div>
+        <div class="callout">Only closed requests with valid, nonnegative intervals are eligible. Unresolved requests are excluded; agencies with no eligible intervals are omitted. Closure times depend on request mix and cohort age. This is not an official performance ranking.</div>
+      </section>
+      <section id="quality" class="panel" aria-labelledby="quality-title"><div class="panel-header"><h2 id="quality-title">Data quality deserves a closer look</h2><span class="index">05 / QUALITY</span></div>
+        <p class="intro">Source inconsistencies are retained and made visible before interpretation.</p>
+        <div class="quality-count"><strong>@@flagged@@</strong><span>requests with at least one quality flag</span></div>
+        <div class="chart" aria-label="Interactive data quality rule counts chart">@@quality@@</div>
+        <div class="callout">Flags may overlap: one request can trigger multiple rules. Flagged requests remain in the cohort; duration eligibility is evaluated separately. A flag identifies a case for investigation, not a proven cause.</div>
+      </section>
+    </div>
+    <details><summary>Indicator definitions &amp; interpretation</summary>
+      <table><thead><tr><th>Indicator</th><th>Definition</th></tr></thead><tbody>
+        <tr><td>Total requests</td><td>Identifiable requests in this creation cohort, including quality-flagged records.</td></tr>
+        <tr><td>Open / closed</td><td>Explicit normalized source-status mapping at observation. Unknown statuses remain a separate group; they are not counted as open.</td></tr>
+        <tr><td>Median resolution</td><td>Median source-local wall-clock hours from creation to closure for closed requests with valid timestamps and closure ≥ creation. Zero-hour intervals are valid. Group medians are never averaged into the cohort median.</td></tr>
+        <tr><td>Quality-flagged rate</td><td>100 × requests with at least one implemented quality flag / all identifiable cohort requests.</td></tr>
+      </tbody></table><p>The source is mutable. Results reflect the displayed observation, not historical status at the period end. Closure is not proof of satisfaction; unresolved cases are excluded from duration statistics. Elapsed wall-clock times near daylight-saving changes are approximate. No official SLA or causal conclusion is implied.</p>
+    </details>
+    <footer><strong>Source:</strong> <a href="https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2020-to-Present/erm2-nwe9">NYC Open Data · 311 Service Requests from 2020 to Present</a>
+      <div class="footer-links"><a href="@@repository@@/tree/main/docs/evidence">Verified aggregate data ↗</a><a href="@@repository@@/blob/main/docs/data_dictionary.md">Metric definitions ↗</a><a href="@@repository@@/blob/main/docs/results.md">Actual results &amp; verification ↗</a></div>
+      <span class="run-id">Snapshot run: @@run_id@@</span><br>Built with Python and Plotly · Published as a static GitHub Pages site · No individual request records are published here.
+    </footer>
+  </main>
+</body>
+</html>

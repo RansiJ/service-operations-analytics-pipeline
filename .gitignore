@@ -12,6 +12,7 @@ dist/
 !.env.example
 data/
 outputs/
+site/
 *.duckdb*
 *.db
 *.parquet

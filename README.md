@@ -2,9 +2,13 @@
 
 [![CI](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/workflows/ci.yml)
 
+**[Interactive Dashboard ↗](https://ransij.github.io/service-operations-analytics-pipeline/)** · [Source data](https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2020-to-Present/erm2-nwe9) · [Methodology](docs/data_dictionary.md)
+
 A reproducible **Python + SQL + DuckDB** pipeline that turns a bounded cohort of real NYC 311 requests into operational metrics and Power BI-ready CSV datasets. SQL performs the main ELT transformations; a small Python ETL example demonstrates the difference and checks equivalent results.
 
-**Verified local result:** 78,466 requests created October 1–7, 2026; 38 automated tests; zero ETL/ELT mismatches in a 1,000-request comparison. See [actual results](docs/results.md) for observation time, denominators and verification evidence.
+**Verified local result:** 78,466 requests created October 1–7, 2026; 60 automated tests; zero ETL/ELT mismatches in a 1,000-request comparison. See [actual results](docs/results.md) for observation time, denominators and verification evidence.
+
+The dashboard presents that fixed cohort with interactive daily volume, top categories, agency demand, eligible agency resolution medians and quality-rule counts. Its source snapshot was observed **October 15, 2026 at 00:32 UTC** (October 14 at 18:32 in Costa Rica). Chart controls act locally; KPI cards remain cohort-wide. The site publishes aggregate results and does not query the API. [Build and validation details](docs/dashboard.md).
 
 ![Static preview based on actual pipeline results](docs/evidence/dashboard_preview.png)
 
@@ -36,6 +40,7 @@ flowchart TD
     D --> E[Requests and aggregate analytics tables]
     E --> F[Consistency checks / audit / CSV / static preview]
     F --> G[Power BI import / documented report specification]
+    F --> P[Verified aggregate evidence / Plotly HTML / GitHub Pages]
     B --> H[Small ETL subset / Python date and status validation]
     H --> I[DuckDB etl_demo target]
     I --> J[ETL versus ELT parity check]
@@ -63,7 +68,7 @@ ETL uses at most 1,000 requests by default (configurable up to 5,000), ordered b
 
 ## Tech stack
 
-Python 3.12, DuckDB SQL, Requests, Matplotlib, pytest, uv, Git and GitHub Actions. CSV is the Power BI interchange format. No cloud database, orchestration server or paid service is required. `uv.lock` fixes dependency versions; wheel builds include SQL resources. `tzdata` supplies Windows timezone data.
+Python 3.12, DuckDB SQL, Requests, Matplotlib, Plotly, pytest, uv, Git and GitHub Actions. CSV is the Power BI interchange format; GitHub Pages hosts the static aggregate dashboard. No cloud database, orchestration server or paid service is required. `uv.lock` fixes dependency versions; wheel builds include SQL and dashboard template resources. `tzdata` supplies Windows timezone data.
 
 ## Repository structure
 
@@ -76,14 +81,18 @@ src/service_analytics/
   schema.sql             RAW, membership, rejection and run audit tables
   transform.sql          SQL models, metrics and quality rules
   preview.py             Static analytical preview
+  dashboard.py           Verified-aggregate Plotly dashboard builder
+  dashboard.html         Small HTML/CSS template
 tests/                   Small deterministic fixtures and mocked API responses
 docs/
   data_dictionary.md     Fields, quality rules and metric denominators
   power_bi.md            Import, DAX, relationships and report layout
   results.md             Measured results and interpretation limits
+  dashboard.md           Static dashboard build, scope and validation
   evidence/              Small aggregate snapshots and verified preview
 data/                    Local DuckDB file (ignored)
 outputs/                 Per-run CSVs, summary and preview (ignored)
+site/                    Generated dashboard and shared JS runtime (ignored)
 ```
 
 ## Setup and execution
@@ -105,6 +114,14 @@ uv run --frozen service-analytics --start 2026-10-01 --end 2026-10-03 --max-reco
 Without dates, the CLI extracts the single NYC calendar day **before yesterday**, allowing some source publication lag. This is not a guarantee that the source is complete. Logs go to standard error; the final JSON includes the output path, audit counts, metrics and CSV hashes. To inspect a past run, open its `run_summary.json` and consult the local `pipeline_runs` table.
 
 To keep the environment outside this project on PowerShell, optionally set `UV_PROJECT_ENVIRONMENT` to an external directory before `uv sync`. The default `.venv` is already ignored. Do not commit generated databases, row-level datasets or credentials.
+
+Generate the dashboard from the committed aggregate snapshot, without running extraction:
+
+```shell
+uv run --frozen python -m service_analytics.dashboard
+```
+
+Open `site/index.html` in a browser. All chart data and the shared Plotly JavaScript runtime are local; no Python backend or CDN is needed. The Pages workflow generates the same directory during deployment. See [dashboard documentation](docs/dashboard.md) for input validation, interpretation and refresh scope.
 
 ## Data quality and testing
 
@@ -151,6 +168,7 @@ The largest category was **ILLEGAL PARKING (13,664)** and the largest agency by 
 
 - **CI:** push to `main`, pull requests and manual execution; Python 3.12 on Linux and Windows; locked dependencies, offline tests and a Linux wheel/resource smoke check.
 - **Bounded public-data refresh:** manual dates (maximum 100,000 rows), or Monday at 10:23 UTC / 04:23 Costa Rica using the default one-day window (maximum 25,000 rows). Runs tests first, then exports an artifact retained for 14 days. It does not commit data or reuse a database from a prior runner.
+- **Deploy analytics dashboard:** builds and tests the committed aggregate snapshot, uploads a Pages artifact and deploys it using the official GitHub Pages Actions. Runs on relevant changes to `main` or manually; it does not run extraction or automatically adopt refresh-workflow artifacts.
 
 Actions use pinned commit SHAs and read-only repository permissions. Source outages, rate limits, runner delays, schema changes or volume caps can fail a live run; these failures are visible in Actions and its diagnostic log. CI passing does not prove API availability. Scheduled runners are ephemeral: refresh a historical window manually to capture later closures. The weekly job is a bounded execution demonstration, not continuous citywide monitoring. Public repository artifacts contain only selected public-source fields.
 
