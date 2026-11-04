@@ -174,6 +174,50 @@ Actions use pinned commit SHAs and read-only repository permissions. Source outa
 
 **Publication verified:** [Linux and Windows CI passed](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/runs/38660978021), and a [manual real-data run passed and produced a downloadable artifact](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/runs/38660987609). All eight downloaded CSV hashes were verified, and its metrics matched the recorded local results. [Verification record](docs/evidence/publication_verification.json).
 
+## Experimental dbt integration (phases 0–1)
+
+dbt organizes analytical SQL models, their dependencies, tests and documentation.
+This optional proof of concept uses **dbt Core 1.12.6 + dbt-duckdb 1.11.1** to
+materialize a single staging model in an isolated, deterministic DuckDB test
+database. It provides a controlled starting point for maintainable SQL and lineage;
+it is a partial integration and the project remains **1.0.0**.
+
+Run from the repository root with Python 3.12; the commands work in PowerShell and
+Bash and do not call the NYC API:
+
+```shell
+uv sync --frozen --group dbt
+uv run --frozen --group dbt python -m service_analytics.dbt_poc prepare
+uv run --frozen --group dbt dbt debug --project-dir analytics --profiles-dir analytics
+uv run --frozen --group dbt dbt run --project-dir analytics --profiles-dir analytics --vars '{run_id: poc-selected, snapshot_id: poc-fixture-v1}'
+uv run --frozen --group dbt dbt test --project-dir analytics --profiles-dir analytics --vars '{run_id: poc-selected, snapshot_id: poc-fixture-v1}'
+uv run --frozen --group dbt python -m service_analytics.dbt_poc verify
+uv run --frozen --group dbt pytest
+uv run --frozen --group dbt dbt docs generate --project-dir analytics --profiles-dir analytics --vars '{run_id: poc-selected, snapshot_id: poc-fixture-v1}'
+```
+
+Preparation creates `analytics/sandbox/service_requests_poc.duckdb` exclusively
+from synthetic inputs using the original loader and SQL. It refuses existing
+files; on subsequent runs reuse that database and start with `dbt debug`.
+The model writes only `dbt_staging.stg_service_requests`. Both variables are
+mandatory and checked against the snapshot and successful run audit. RAW holds
+latest-observed values; membership selects IDs and cannot reconstruct historical
+payload versions. Never point this experiment at the operational database.
+
+Extraction, RAW loading, UPSERT, membership, operational transactions, original
+SQL transformations, quality rules, all metrics, exports, preview, ETL comparison
+and existing workflows remain unchanged. Classification, flags and analytical
+marts have **not** been migrated. The default `uv sync --frozen` and original
+pipeline work without dbt; use `--group dbt` for every experimental `uv run`.
+
+The local validation passed 63 pytest cases with dbt, 11 dbt data tests and exact
+staging parity on deterministic fixtures. Linux dbt execution and visual inspection
+of the generated docs remain pending. Installation choices, commands for alternative
+test paths, actual results and future phases are documented in the
+[integration guide](docs/migration/dbt_integration.md),
+[baseline audit](docs/migration/dbt_baseline.md) and
+[ADR-001](docs/decisions/ADR-001-dbt-integration.md).
+
 ## Limitations and future improvements
 
 The source can change during pagination; no cross-request snapshot guarantee is available. Floating dates make elapsed durations around DST transitions approximate wall-clock hours. Resolution statistics exclude unresolved cases and are affected by cohort age and agency/category mix. A closed request is not proof of service satisfaction. Open requests with closure dates need source-domain investigation.

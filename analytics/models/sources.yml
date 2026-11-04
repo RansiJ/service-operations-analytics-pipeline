@@ -1,0 +1,60 @@
+version: 2
+sources:
+  - name: nyc311
+    schema: main
+    description: >-
+      Isolated deterministic snapshot using the original loader and schema.
+      RAW is latest-observed state, not a version history. Membership is a cohort,
+      not evidence of the values observed at a historical run.
+    tables:
+      - name: raw_requests
+        description: One latest observed payload per source identifier.
+        columns:
+          - {name: unique_key, description: 'Text source ID; RAW primary key.'}
+          - {name: created_date, description: 'Original NYC floating local creation string.'}
+          - {name: closed_date, description: 'Original NYC floating local closure string; nullable or malformed.'}
+          - {name: agency, description: 'Original agency code.'}
+          - {name: agency_name, description: 'Original agency display name.'}
+          - {name: complaint_type, description: 'Original category label; no semantic merging.'}
+          - {name: status, description: 'Original lifecycle status label.'}
+          - {name: borough, description: 'Original borough label.'}
+          - {name: descriptor, description: 'Original detail; preserved in RAW, unused by this staging model.'}
+          - {name: resolution_action_updated_date, description: 'Original resolution update string; not a complete change history.'}
+          - {name: source_updated_at, description: 'Socrata UTC ingestion/update string; not a precise operational transition.'}
+          - {name: source_payload, description: 'Original selected payload as JSON.'}
+          - {name: fetched_at, description: 'UTC observation time, TIMESTAMPTZ.'}
+          - {name: last_run_id, description: 'Run that last UPSERTed this ID; independent of membership.'}
+      - name: run_members
+        description: 'One (run_id, unique_key) pair per distinct accepted input ID; no payload version.'
+        columns:
+          - {name: run_id, description: 'Explicit cohort execution identifier.'}
+          - {name: unique_key, description: 'Logical reference to raw_requests.unique_key.'}
+      - name: pipeline_runs
+        description: 'Execution audit. Only the explicitly marked successful POC run is allowed.'
+        columns:
+          - {name: run_id, description: 'Execution primary key.'}
+          - {name: window_start, description: 'Inclusive NYC creation date boundary.'}
+          - {name: window_end, description: 'Exclusive NYC creation date boundary.'}
+          - {name: started_at, description: 'UTC execution start.'}
+          - {name: finished_at, description: 'UTC execution finish.'}
+          - {name: status, description: 'running, success or failed.'}
+          - {name: source_count, description: 'Source count for this bounded cohort.'}
+          - {name: extracted_count, description: 'Returned source rows.'}
+          - {name: loaded_count, description: 'Distinct accepted IDs; must equal cohort size.'}
+          - {name: rejected_count, description: 'Rows without a usable identifier.'}
+          - {name: duplicate_count, description: 'Extra accepted-ID occurrences; last payload wins.'}
+          - {name: flagged_count, description: 'Requests with at least one original quality flag.'}
+          - {name: error, description: 'Bounded failure text when applicable.'}
+  - name: poc
+    schema: main
+    description: 'POC-only metadata, never added to the operational database.'
+    tables:
+      - name: dbt_poc_snapshot
+        description: 'Explicit snapshot/run pair with content fingerprints and original-table checksums.'
+        columns:
+          - {name: snapshot_id, description: 'Versioned deterministic fixture identity.'}
+          - {name: run_id, description: 'Selected successful cohort.'}
+          - {name: raw_hash, description: 'MD5 of ordered JSON RAW rows; integrity check, not a security hash.'}
+          - {name: members_hash, description: 'MD5 of all ordered membership rows.'}
+          - {name: runs_hash, description: 'MD5 of all ordered execution audit rows.'}
+          - {name: original_hashes, description: 'JSON of checksums for every original persistent main table.'}

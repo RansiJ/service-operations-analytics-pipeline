@@ -1,0 +1,16 @@
+name: service_operations_poc
+version: '1.0.0'
+config-version: 2
+require-dbt-version: ['>=1.12.6', '<1.13.0']
+profile: service_operations_poc
+flags:
+  send_anonymous_usage_stats: false
+model-paths: [models]
+test-paths: [tests]
+macro-paths: [macros]
+clean-targets: [target, dbt_packages]
+on-run-start:
+  - '{{ validate_poc_snapshot() }}'
+models:
+  service_operations_poc:
+    +materialized: table
