@@ -20,7 +20,7 @@
 
 *Authentic Matplotlib preview of the fixed cohort, observed October 15, 2026 at 00:32 UTC. The existing Plotly dashboard uses the same aggregate evidence. This is a historical snapshot, not live monitoring.*
 
-The intended [GitHub Pages URL](https://ransij.github.io/service-operations-analytics-pipeline/) returned **404 on November 4, 2026**. Use the local dashboard instructions below. The existing Pages workflow is preserved; no deployment is performed in this iteration.
+The intended [GitHub Pages URL](https://ransij.github.io/service-operations-analytics-pipeline/) returned **404 on November 4, 2026**. Pages is configured for GitHub Actions, but the dashboard workflow is not yet on main and no Pages deployment was found. Use the local dashboard instructions below. Status: **ready for manual publication / not verified**. [Publication steps](docs/dashboard.md#publication-status-and-manual-steps).
 
 ## Architecture
 
@@ -106,7 +106,7 @@ Recorded real-data cohort: **October 1–7, 2026**, observed **October 15 at 00:
 | Requests with quality flags | 1,866 (2.3781%) |
 | ETL/ELT subset mismatches | 0 of 1,000 |
 
-[Original results and evidence](docs/results.md) document these figures. [Phase 2 validation](docs/validation/dbt_full_parity.md) separately records current offline tests, synthetic full parity and platform limitations. The CI badge reflects published `main`; it is not evidence that these unpushed dbt changes ran remotely.
+[Original results and evidence](docs/results.md) document these figures. [Phase 2 validation](docs/validation/dbt_full_parity.md) records synthetic full parity. This branch configures separate base and dbt jobs on Ubuntu and Windows; the dbt job rejects skipped tests and verifies a fresh isolated database. Read hosted outcomes in the PR checks and [branch CI runs](https://github.com/RansiJ/service-operations-analytics-pipeline/actions/workflows/ci.yml?query=branch%3Afeature%2Fdbt-analytics-layer). The badge above reflects published `main`, independently of the feature branch. [Local checks and publication status](docs/validation/stabilization_phase2_5.md).
 
 This is a creation cohort, not the citywide backlog. Resolution statistics exclude unresolved cases and depend on cohort age and request mix. Business dates are floating NYC wall-clock timestamps, making intervals near DST changes approximate. A closure is not evidence of satisfaction; no SLA, causal effect or agency-performance ranking is claimed.
 
@@ -120,6 +120,7 @@ RAW stores the latest payload observed for each ID. `run_members` identifies coh
 - [dbt setup, model map and reproduction](docs/migration/dbt_integration.md)
 - [Baseline audit](docs/migration/dbt_baseline.md), [ADR-001: engine choice](docs/decisions/ADR-001-dbt-integration.md), [ADR-002: model migration](docs/decisions/ADR-002-dbt-model-migration.md)
 - [Full parity and regression results](docs/validation/dbt_full_parity.md)
+- [CI stabilization, platform evidence and publication checklist](docs/validation/stabilization_phase2_5.md)
 - [Power BI import specification](docs/power_bi.md) and [Unreleased changes](CHANGELOG.md)
 
 Version remains **1.0.0**. Phase 3 must address writer coordination, snapshot policy, transaction/publication recovery and operational cutover before dbt can replace the original transformation path.

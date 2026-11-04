@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Phase 2.5 — CI stabilization and publication preparation
+
+- Add a separate dbt job on Ubuntu/Windows, preserving the base matrix
+  and Linux wheel check. Run the locked environment, full offline pytest, a fresh
+  synthetic dbt build and exact six-output/ten-fingerprint verification.
+- Fail the dbt job on skipped or uncollected tests; check that the operational
+  database is absent. Keep generated reports/databases local to the runner.
+- Enable CI pushes only on main and the named feature branch, alongside PR/manual
+  triggers, so validation can run before an authorized merge.
+- Document the observed Pages configuration, unpublished workflow and deployment
+  checklist. Keep the existing Pages/refresh workflows and all analytical code.
+- Record local evidence separately from hosted validation and publication status.
+
 ### Phase 2 — parallel analytical migration
 
 - Preserve the previously uncommitted dashboard and phases 0–1 in separate local commits.

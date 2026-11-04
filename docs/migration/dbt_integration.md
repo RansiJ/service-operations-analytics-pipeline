@@ -101,6 +101,9 @@ recorded independently in local commit `18f229a` before phase-2 edits.
 
 Design writer coordination, snapshot/version policy, transaction and filesystem
 recovery, export compatibility and operational cutover before calling dbt from the
-pipeline. Validate Linux alongside Windows before changing CI; WSL is unavailable
-and Docker is absent in this environment. No existing workflow was modified.
+pipeline. Phase 2.5 adds a separate offline dbt CI matrix for Ubuntu and Windows,
+including a zero-skip check and fresh-database parity verification. Hosted outcomes
+are recorded by branch CI and PR checks; the local Windows replay alone is not
+proof of Linux support. See the [stabilization evidence](../validation/stabilization_phase2_5.md)
+for the local baseline and the distinction between execution environments.
 The original SQL remains an independent reference until a reviewed cutover.

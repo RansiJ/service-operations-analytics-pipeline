@@ -1,9 +1,11 @@
 # Interactive aggregate dashboard
 
 **Intended public URL:** [NYC 311 | Service Operations Analytics](https://ransij.github.io/service-operations-analytics-pipeline/).
-An HTTP check on November 4, 2026 returned **404**. Use the local build below;
-the existing Pages workflow is preserved, but its deployment was not performed
-or verified in phase 2. Earlier publication statements are historical context.
+An HTTP check on November 4, 2026 returned **404**. Status:
+**ready for manual publication / not verified**. Pages is already configured for
+GitHub Actions, but the dashboard workflow has not been pushed to public main
+and no github-pages deployment was found. Use the local build below. Earlier
+publication statements are historical context, not evidence of a deployed dashboard.
 
 The pipeline remains the source of analytical definitions. This small presentation layer reads its verified aggregates, checks their integrity and exports five Plotly figures into a static HTML/CSS page. It introduces no database, API extraction, web framework or Python server.
 
@@ -58,9 +60,42 @@ Unresolved requests are excluded from resolution statistics, and request mix, co
 
 Pushes affecting the builder, its template, evidence, dependency files, dashboard tests or Pages workflow deploy the committed snapshot. Manual `workflow_dispatch` is also supported. Existing CI and data-refresh workflows are preserved. A successful data-refresh artifact does **not** automatically replace dashboard evidence: review and publish a coherent set of aggregates plus its matching summary to update the snapshot. No NYC API call occurs during dashboard generation or deployment.
 
+## Publication status and manual steps
+
+Read-only checks in phase 2.5 found `has_pages=true`, `build_type=workflow`, public
+main at `5dc3143`, only CI/data-refresh workflows remotely and no github-pages
+deployments. The feature branch is not on origin. This explains the current
+publication blocker without assuming that Pages is disabled or configured incorrectly.
+The existing pages.yml needs no code change: pinned actions resolve, site/ is the
+upload path, build permissions are read-only, and Pages/OIDC writes belong to deploy.
+
+After authorization to publish:
+
+1. Review/commit the local changes and push `feature/dbt-analytics-layer`. Open a PR
+   and wait for the four base/dbt Ubuntu/Windows CI checks. No remote dbt run is
+   verified yet; the proposed workflow can also be dispatched on the feature ref.
+2. Once those checks pass and merge is authorized, merge the reviewed changes to main.
+3. In **Settings → Pages → Build and deployment**, verify **Source: GitHub Actions**.
+   That value is already set according to the API; no change was made here.
+4. In **Actions → Deploy analytics dashboard → Run workflow**, select main and
+   run it if the matching main push did not trigger it. Confirm both build and
+   deploy succeed and record the run URL.
+5. Check the public HTML and `assets/plotly.min.js` return 200; inspect populated
+   charts and relative asset loading on desktop and mobile. Only then label the
+   dashboard verified deployed and promote its public link in the README.
+
+Do not run the ingestion workflow to publish this fixed dashboard. No push, merge,
+workflow dispatch, Settings change or deployment occurred during stabilization.
+
 ## Verification and limits
 
-The complete local suite has **60 passing pytest cases**, including 22 dashboard cases for evidence reading, missing/malformed inputs, numeric integrity, aggregate reconciliation, metadata interpretation, null medians, actual figure data, local Top N controls, HTML generation and safe label escaping. Tests verify five populated figures, one local runtime reference, expected KPI values, unique chart IDs and absence of exported row-level CSVs.
+The original dashboard delivery recorded **60 passing pytest cases**, including
+22 dashboard cases for evidence reading, missing/malformed inputs, numeric integrity,
+aggregate reconciliation, metadata interpretation, null medians, actual figure data,
+local Top N controls, HTML generation and safe label escaping. Tests verify five
+populated figures, one local runtime reference, expected KPI values, unique chart
+IDs and absence of exported row-level CSVs. Current counts and platform limits are
+reported separately in [phase 2.5 validation](validation/stabilization_phase2_5.md).
 
 Browser automation was attempted through the available browser tools; no browser was connected, and both the integrated browser and Chrome reported unavailable. Browser rendering, hover/zoom interactions and mobile visual layout have therefore **not been visually verified** in this session. The responsive layout, Plotly controls and static export are implemented, with structural tests; these do not substitute for in-browser QA. No browser screenshot is claimed.
 
