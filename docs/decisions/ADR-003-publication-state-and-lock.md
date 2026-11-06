@@ -1,0 +1,84 @@
+# ADR-003: estados de publicación y lock cooperativo opt-in
+
+Decisión para fase 3B, entrega 1. Estado: implementación propuesta para revisión
+mediante PR, inactiva en el camino operativo. Versión 1.0.0 sin cambios.
+
+## Contexto
+
+La fase 3A propuso B simplificada: una base, cohorte congelada, dbt candidato y
+promoción controlada. Esta entrega solo construye sus fundamentos. La transacción
+original agrupa RAW/SQL/ETL/export; el nuevo módulo no altera esa garantía ni
+confunde una fase declarada con una publicación real. Los snapshots y T2 aún no existen.
+
+## Decisión
+
+- Un módulo publication.py, enums/RunState inmutable y helpers explícitos, sin
+  import ni llamada desde pipeline. Transiciones adyacentes; fase, intento y
+  outcome/error separados. El primer error en tables_committed exige reconciliación.
+- Invariantes terminales: failed y requires_reconciliation no cambian fase,
+  identidad, outcome ni error dentro de un mismo (run_id, attempt). failed() acepta
+  solo la repetición literal del mismo error como no-op; otro texto se rechaza.
+  record_run aplica la regla independientemente del constructor y conserva el
+  compare-and-set contra escritores obsoletos. retry previo a T2 crea otro intento.
+- published/succeeded es **estrictamente terminal**. failed() no lo transforma en
+  requires_reconciliation, y record_run rechaza esa edición aunque sea construible.
+  Se elige la alternativa mínima permitida por la auditoría: no añadir una API de
+  reconciliación post-publicación sin su protocolo/evidencia operativa. Una futura
+  inconsistencia requerirá una decisión explícita posterior, sin reescribir esta fila.
+- DDL opt-in propio: run_publications por (run_id, attempt), publication_state
+  singleton vacío. No hay escritor del pointer ni importación de legacy success.
+  Inicialización transaccional idempotente, columnas/PK verificadas y error explícito
+  para esquema incompatible; no migración automática ni DROP.
+- Un archivo estable adyacente a la DB canónica y descriptor bloqueado de forma
+  no bloqueante. Byte de lock reservado, binding JSON de DB/output escrito después
+  de adquirir exclusión. No se borra el archivo al liberar: conserva identidad y
+  evita crear otro inode mientras haya un propietario.
+- Solo biblioteca estándar msvcrt/fcntl; no reintento interno ni daemon. Pipes
+  sincronizan tests de procesos reales con timeouts de seguridad.
+
+Se justifican el error por intento y PK compuesta frente al diseño inicial por run:
+permiten conservar fallos previos sin modificar pipeline_runs ni duplicar sus
+conteos/ventana. El historial de intentos es pequeño; no se añade un event log.
+El binding persistente usa el mismo archivo del lock; evita una tercera tabla o
+sidecar de configuración y funciona sin abrir DuckDB. No es una migración de datos.
+
+## Alternativas descartadas
+
+| Alternativa | Motivo |
+|---|---|
+| Añadir tablas al initialize/schema original | Cambiaría las diez tablas de referencia POC y activaría metadatos incidentalmente |
+| Un único status success/failed | Pierde la fase alcanzada y no expresa incertidumbre posterior a T2 |
+| Lock por exists/PID/edad con unlink | No representa propiedad OS; permite carreras y pérdida del binding |
+| Espera/retry de duración interna | No es necesaria para esta entrega; fail-fast ofrece comportamiento comprobable y evita esperas ocultas |
+| Librería de locks nueva o servidor | Las primitivas estándar bastan para exclusión local; más dependencias/mantenimiento sin necesidad demostrada |
+| Certificar legacy mediante último success | Auditoría sola no verifica coherencia con tablas, latest y archivos |
+| Usar failed() para cambiar un published/succeeded | Oculta una transición excepcional y puede reescribir historia; se deja fuera hasta diseñar una operación explícita |
+
+## Consecuencias y límites
+
+El llamador futuro deberá usar el lock y sus transacciones de manera correcta;
+record_run no bloquea DuckDB por su cuenta. Los nombres SQL son constantes; solo
+se parametrizan valores. El schema valida estructura/PK, no es un verificador
+general de toda alteración manual de constraints. La inspección de legacy es
+deliberadamente conservadora, sin afirmar que un registro published acredite archivos.
+
+La ruta autorizada la declara el llamador. Paths resueltos/binding no son una
+barrera contra un tercero que cambie enlaces, borre el lock o escriba DuckDB.
+No se certifica almacenamiento sincronizado/red, alias hardlink ni traslado de una
+DB conservando identidad. La terminación de hijos y la recuperación completa se
+posponen; un descriptor liberado no prueba que no quede un futuro dbt huérfano.
+
+Coste: mantener un módulo y su schema fijo, dos variantes OS pequeñas y pruebas
+de IPC. No hay cambios de CLI, workflow, métricas ni dependencias. Futuras columnas
+exigirán migración revisada; la incompatibilidad se rechaza en lugar de improvisarla.
+
+Los resultados de Windows local y de los cuatro jobs Ubuntu/Windows se registran
+por SHA en el PR y en el paquete externo final de revisión. Tener una rama fcntl
+y tests portables no constituye por sí solo evidencia de compatibilidad aprobada.
+Detalles de API, tests, ejemplo sintético y exclusiones en
+[phase3b1_foundations.md](../migration/phase3b1_foundations.md).
+
+Referencias primarias: [msvcrt.locking Python 3.12](https://docs.python.org/3.12/library/msvcrt.html#msvcrt.locking)
+para región por descriptor/modo inmediato y [fcntl.flock Python 3.12](https://docs.python.org/3.12/library/fcntl.html#fcntl.flock)
+para exclusión no bloqueante Unix. Las pruebas locales, no esas páginas, acreditan
+el resultado Windows de esta entrega.
