@@ -24,11 +24,17 @@ esta entrega no lo repite ni lo declara pendiente nuevamente.
   por alfanumérico. No son identificadores SQL. En created snapshot_id es NULL;
   después se exige uno explícito e invariable. Validar la cadena **no comprueba
   existencia de un snapshot**: su implementación queda para otra entrega.
-- Un error conserva la fase alcanzada. Antes de tables_committed, outcome=failed;
-  desde esa fase, requires_reconciliation, nunca rollback declarado.
+- El primer error de un intento activo conserva la fase alcanzada. Antes de
+  tables_committed, outcome=failed; en tables_committed, requires_reconciliation,
+  nunca rollback declarado. Ambos resultados son terminales e inmutables: repetir
+  exactamente el mismo error/estado es no-op; cambiar su texto, identidad, fase u
+  outcome se rechaza también por record_run, incluso con un objeto construible.
 - `retry` es una decisión explícita de metadatos, solo antes de T2 y después de
   failed: incrementa intento y conserva fase/identidad. La fila previa no se borra.
-  No reintenta procesos ni recupera datos. Un intento published termina succeeded.
+  No reintenta procesos ni recupera datos. published/succeeded es estrictamente
+  terminal: failed() y record_run no permiten convertirlo en reconciliación.
+  Registrar una inconsistencia posterior requerirá un protocolo futuro explícito;
+  esta entrega no lo implementa ni modifica una publicación pasada.
 - `record_run` conserva duplicados exactamente coherentes como no-op, valida la
   progresión y rechaza duplicados incompatibles. UPDATE compara todos los valores
   anteriores para detectar una actualización concurrente. El llamador debe
@@ -144,12 +150,27 @@ uv sync --frozen --group dbt
 uv run --frozen --group dbt pytest
 ```
 
-La entrega se validó localmente en Windows; Linux queda NOT_RUN por falta de WSL
-instalado/runner local. La misma prueba usa fcntl al ejecutarse en Ubuntu; el CI
-existente la descubrirá por pytest en un futuro PR o dispatch autorizado, sin cambios
-de workflow. Un push de esta rama nueva por sí solo no está en el filtro actual de
-ramas de CI. No atribuirle por anticipado un resultado alojado. El ZIP de revisión
-externo contiene comandos, JUnit y resultados exactos del código entregado.
+El baseline nuevo de Windows antes de la corrección fue 116 passed con dbt y
+110 passed/6 skipped en base. La suite centrada corregida tiene 56 casos: también
+cubre inmutabilidad después de retry y un escritor que lee un estado activo antes
+de que otro lo convierta en terminal. Las seis omisiones base son los tests dbt
+opcionales originales, que sí deben ejecutarse en el job especializado.
+
+Tras la corrección, las suites locales completas de Windows terminaron con
+**128 passed/0 skipped con dbt** y **122 passed/6 skipped sin dbt**. No hubo errores
+ni cambios de dependencias. Los XML nuevos conservan esos conteos tras anonimizar.
+
+Los resultados finales, comandos, SHA y enlaces alojados se documentan en el PR y
+en el paquete externo `service-operations-phase3b1-final-review.zip`. El workflow
+existente descubre todos los tests en sus cuatro jobs Ubuntu/Windows, sin cambios.
+La rama nueva no activa CI por push bajo el filtro actual; el PR sí lo activa. No
+se deduce éxito de la configuración: hay que revisar las ejecuciones del head real.
+
+Los JUnit del paquete final se anonimizan sobre atributos/texto de un árbol XML y
+se serializan con ElementTree; luego se parsean y cotejan conteos con el log. Esto
+corrige el reemplazo textual del empaquetador externo anterior, que introducía
+`<repo>` sin escapar en atributos. No se reescriben resultados para aparentar una
+ejecución nueva ni se añaden scripts de empaquetado permanentes al repositorio.
 
 Fuera de alcance: congelar entradas, invocar dbt operativo, publicar siete tablas,
 escribir latest, validar manifiestos, migrar una DB real, recuperar hijos/caídas,

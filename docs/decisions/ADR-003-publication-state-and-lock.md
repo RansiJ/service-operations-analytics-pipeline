@@ -1,7 +1,7 @@
 # ADR-003: estados de publicación y lock cooperativo opt-in
 
-Decisión para fase 3B, entrega 1. Estado: implementado localmente, inactivo en el
-camino operativo; pendiente de revisión/publicación. Versión 1.0.0 sin cambios.
+Decisión para fase 3B, entrega 1. Estado: implementación propuesta para revisión
+mediante PR, inactiva en el camino operativo. Versión 1.0.0 sin cambios.
 
 ## Contexto
 
@@ -14,7 +14,17 @@ confunde una fase declarada con una publicación real. Los snapshots y T2 aún n
 
 - Un módulo publication.py, enums/RunState inmutable y helpers explícitos, sin
   import ni llamada desde pipeline. Transiciones adyacentes; fase, intento y
-  outcome/error separados. Error posterior a tables_committed exige reconciliación.
+  outcome/error separados. El primer error en tables_committed exige reconciliación.
+- Invariantes terminales: failed y requires_reconciliation no cambian fase,
+  identidad, outcome ni error dentro de un mismo (run_id, attempt). failed() acepta
+  solo la repetición literal del mismo error como no-op; otro texto se rechaza.
+  record_run aplica la regla independientemente del constructor y conserva el
+  compare-and-set contra escritores obsoletos. retry previo a T2 crea otro intento.
+- published/succeeded es **estrictamente terminal**. failed() no lo transforma en
+  requires_reconciliation, y record_run rechaza esa edición aunque sea construible.
+  Se elige la alternativa mínima permitida por la auditoría: no añadir una API de
+  reconciliación post-publicación sin su protocolo/evidencia operativa. Una futura
+  inconsistencia requerirá una decisión explícita posterior, sin reescribir esta fila.
 - DDL opt-in propio: run_publications por (run_id, attempt), publication_state
   singleton vacío. No hay escritor del pointer ni importación de legacy success.
   Inicialización transaccional idempotente, columnas/PK verificadas y error explícito
@@ -42,6 +52,7 @@ sidecar de configuración y funciona sin abrir DuckDB. No es una migración de d
 | Espera/retry de duración interna | No es necesaria para esta entrega; fail-fast ofrece comportamiento comprobable y evita esperas ocultas |
 | Librería de locks nueva o servidor | Las primitivas estándar bastan para exclusión local; más dependencias/mantenimiento sin necesidad demostrada |
 | Certificar legacy mediante último success | Auditoría sola no verifica coherencia con tablas, latest y archivos |
+| Usar failed() para cambiar un published/succeeded | Oculta una transición excepcional y puede reescribir historia; se deja fuera hasta diseñar una operación explícita |
 
 ## Consecuencias y límites
 
@@ -61,8 +72,9 @@ Coste: mantener un módulo y su schema fijo, dos variantes OS pequeñas y prueba
 de IPC. No hay cambios de CLI, workflow, métricas ni dependencias. Futuras columnas
 exigirán migración revisada; la incompatibilidad se rechaza en lugar de improvisarla.
 
-Windows se probó localmente. Ubuntu queda pendiente de ejecución real: tener una
-rama fcntl y tests portables no constituye evidencia de compatibilidad aprobada.
+Los resultados de Windows local y de los cuatro jobs Ubuntu/Windows se registran
+por SHA en el PR y en el paquete externo final de revisión. Tener una rama fcntl
+y tests portables no constituye por sí solo evidencia de compatibilidad aprobada.
 Detalles de API, tests, ejemplo sintético y exclusiones en
 [phase3b1_foundations.md](../migration/phase3b1_foundations.md).
 
