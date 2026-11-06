@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Phase 3B, delivery 1 — inactive publication foundations
+
+- Add opt-in execution phases, per-attempt metadata and conservative legacy
+  assessment, without changing the original initializer or ten-table dbt POC.
+- Add a cooperative local descriptor lock with canonical DB identity and a
+  persistent output-root binding, using the Python standard library.
+- Add synthetic state/schema and real multiprocess tests, plus ADR-003 and a
+  technical guide. Validate Windows locally; Linux execution remains pending.
+- Preserve the operational SQL producer, pipeline, dbt models and workflows.
+  No snapshots, operational dbt, promotion, latest writes or recovery are enabled.
+
 ### Phase 2.6 — publication and repository presentation
 
 - Merge reviewed PR #1 after confirming its original head and all four hosted
