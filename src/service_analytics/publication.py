@@ -77,8 +77,15 @@ class RunState:
                        outcome=Outcome.SUCCEEDED if phase == Phase.PUBLISHED else Outcome.ACTIVE)
 
     def failed(self, error):
+        """Record the first active-attempt failure; terminal history is immutable."""
+        if self.outcome in (Outcome.FAILED, Outcome.REQUIRES_RECONCILIATION):
+            if error == self.error:
+                return self
+            raise ValueError("Terminal attempt is immutable; its original error cannot change")
+        if self.outcome == Outcome.SUCCEEDED:
+            raise ValueError("Published succeeded attempt is terminal; post-publication handling is not implemented")
         outcome = (Outcome.REQUIRES_RECONCILIATION
-                   if self.phase in (Phase.TABLES_COMMITTED, Phase.PUBLISHED) else Outcome.FAILED)
+                   if self.phase == Phase.TABLES_COMMITTED else Outcome.FAILED)
         return replace(self, outcome=outcome, error=error)
 
     def retry(self):
@@ -152,6 +159,8 @@ def record_run(con, state):
               state.outcome.value, state.error)
     if old == state:
         return  # Coherent duplicate, including a duplicate published assertion.
+    if old is not None and old.outcome != Outcome.ACTIVE:
+        raise ValueError("Terminal attempt is immutable; record a legal new attempt instead")
     if old is None:
         previous = con.execute(f"""SELECT {_COLUMNS} FROM main.run_publications WHERE run_id=?
             ORDER BY attempt DESC LIMIT 1""", [state.run_id]).fetchone()

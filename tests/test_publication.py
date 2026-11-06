@@ -114,9 +114,8 @@ def test_failures_and_explicit_attempt_history(metadata):
         failure.advance(Phase.CANDIDATE_VALIDATED)
 
 
-@pytest.mark.parametrize("phase", [Phase.TABLES_COMMITTED, Phase.PUBLISHED])
-def test_post_t2_failures_require_reconciliation(phase):
-    state = _advance_to(phase)
+def test_post_t2_failure_requires_reconciliation():
+    state = _advance_to(Phase.TABLES_COMMITTED)
     failure = state.failed("synthetic audit error")
     assert failure.phase == state.phase
     assert failure.outcome == Outcome.REQUIRES_RECONCILIATION
@@ -124,6 +123,107 @@ def test_post_t2_failures_require_reconciliation(phase):
         failure.retry()
     with pytest.raises(ValueError):
         replace(failure, outcome=Outcome.FAILED)
+
+
+def _store_through(con, phase):
+    state = RunState("run-1")
+    record_run(con, state)
+    for next_phase in list(Phase)[1:list(Phase).index(phase) + 1]:
+        state = state.advance(next_phase, snapshot_id="snapshot-1")
+        record_run(con, state)
+    return state
+
+
+@pytest.mark.parametrize("phase", [Phase.RAW_COMMITTED, Phase.TABLES_COMMITTED])
+def test_terminal_failure_rejects_new_error_and_exact_replay_never_writes(metadata, phase):
+    failure = _store_through(metadata, phase).failed("first error <detail> & evidence")
+    record_run(metadata, failure)
+    assert failure.failed(failure.error) is failure
+    with pytest.raises(ValueError, match="immutable"):
+        failure.failed("replacement error")
+    with pytest.raises(ValueError):
+        failure.advance(Phase.PUBLISHED)
+
+    class ReadOnlyReplay:
+        def execute(self, query, parameters):
+            assert query.lstrip().startswith("SELECT"), "Exact replay must not issue a write"
+            return metadata.execute(query, parameters)
+
+    record_run(ReadOnlyReplay(), failure)
+    assert get_run(metadata, "run-1") == failure
+
+
+@pytest.mark.parametrize("phase", [Phase.RAW_COMMITTED, Phase.TABLES_COMMITTED])
+@pytest.mark.parametrize("field", ["error", "snapshot_id", "phase", "outcome"])
+def test_persistence_rejects_constructible_terminal_edits(metadata, phase, field):
+    failure = _store_through(metadata, phase).failed("original error")
+    record_run(metadata, failure)
+    changes = {
+        "error": {"error": "original error "},
+        "snapshot_id": {"snapshot_id": "other-snapshot"},
+        "phase": {"phase": list(Phase)[list(Phase).index(phase) + 1]},
+        "outcome": {"outcome": Outcome.ACTIVE, "error": None},
+    }
+    altered = replace(failure, **changes[field])  # Valid value, illegal historical edit.
+    with pytest.raises(ValueError, match="immutable"):
+        record_run(metadata, altered)
+    assert get_run(metadata, "run-1") == failure
+    if phase == Phase.TABLES_COMMITTED:
+        with pytest.raises(ValueError):
+            failure.retry()
+
+
+def test_retry_preserves_terminal_history_even_after_new_attempt(metadata):
+    failure = _store_through(metadata, Phase.RAW_COMMITTED).failed("first attempt error")
+    record_run(metadata, failure)
+    retry = failure.retry()
+    record_run(metadata, retry)
+    with pytest.raises(ValueError, match="immutable"):
+        record_run(metadata, replace(failure, error="rewritten after retry"))
+    with pytest.raises(ValueError):
+        record_run(metadata, replace(failure, outcome=Outcome.ACTIVE, error=None))
+    record_run(metadata, failure)
+    assert get_run(metadata, "run-1", 1) == failure
+    assert get_run(metadata, "run-1", 2) == retry
+
+
+def test_published_success_is_strictly_terminal_and_not_a_publication_certificate(metadata):
+    published = _store_through(metadata, Phase.PUBLISHED)
+    with pytest.raises(ValueError, match="post-publication handling is not implemented"):
+        published.failed("inconsistency discovered later")
+    with pytest.raises(ValueError):
+        published.retry()
+    with pytest.raises(ValueError):
+        published.advance(Phase.PUBLISHED)
+    # Constructor can express externally declared metadata; persistence still refuses the edit.
+    inconsistent = replace(published, outcome=Outcome.REQUIRES_RECONCILIATION, error="late discovery")
+    with pytest.raises(ValueError, match="immutable"):
+        record_run(metadata, inconsistent)
+    record_run(metadata, published)
+    assert get_run(metadata, "run-1") == published
+    assert get_publication_state(metadata) is None
+    assert assess_existing_state(metadata) == "requires_reconciliation"
+
+
+def test_stale_active_read_cannot_overwrite_concurrent_terminal_failure(metadata):
+    active = _store_through(metadata, Phase.RAW_COMMITTED)
+    concurrent_failure = active.failed("concurrent terminal error")
+
+    class InterleavedConnection:
+        def execute(self, query, parameters):
+            if query.lstrip().startswith("SELECT") and "AND attempt=?" in query:
+                row = metadata.execute(query, parameters).fetchone()
+                record_run(metadata, concurrent_failure)
+
+                class CapturedRead:
+                    def fetchone(self):
+                        return row
+                return CapturedRead()
+            return metadata.execute(query, parameters)
+
+    with pytest.raises(ValueError, match="changed concurrently"):
+        record_run(InterleavedConnection(), active.advance(Phase.CANDIDATE_VALIDATED))
+    assert get_run(metadata, "run-1") == concurrent_failure
 
 
 def test_empty_and_opt_in_initialization_is_idempotent(metadata):
